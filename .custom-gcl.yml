@@ -1,0 +1,5 @@
+version: v2.1.6
+plugins:
+  # a plugin from local source
+  - module: 'go.tomakado.io/sortir'
+    path: .

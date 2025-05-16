@@ -2,30 +2,43 @@
 
 # Whether to sort elements across empty lines
 # When false (default), sorting only happens within groups (elements not separated by empty lines)
-sort_across_empty_lines: false
+ignoreGroups: false
 
-# Specify which element types to check for sorting
-enabled_checks:
-  # Check constant declarations (const blocks)
-  constants: true
-  
-  # Check variable declarations (var blocks)
-  variables: true
-  
-  # Check struct field ordering
-  struct_fields: true
-  
-  # Check interface method ordering
-  interface_methods: true
-  
-  # Check variadic arguments in function calls
-  variadic_args: true
-  
-  # Check map literal value ordering by key
-  map_values: true
+# Filter elements with a specific prefix. Elements without this prefix will be excluded from sorting.
+filterPrefix: ""
+
+# Check constant declarations (const blocks)
+constants:
+ enabled: true
+ prefix: ""
+
+# Check variable declarations (var blocks)
+variables:
+ enabled: true
+ prefix: ""
+
+# Check struct field ordering
+structFields:
+ enabled: true
+ prefix: ""
+
+# Check interface method ordering
+interfaceMethods:
+ enabled: true
+ prefix: ""
+
+# Check variadic arguments in function calls
+variadicArgs:
+ enabled: false
+ prefix: ""
+
+# Check map literal value ordering by key
+mapValues:
+ enabled: true
+ prefix: ""
 
 # Whether to automatically fix sorting issues
-fix_mode: false
+fixMode: false
 
 # Enable detailed logging
 verbose: false

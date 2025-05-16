@@ -5,6 +5,7 @@ vars:
 
   GOLANGCI_LINT_VERSION: "v2.1.6"
   GOLANGCI_LINT_BIN: "{{ .PROJECT_BIN_DIR }}/golangci-lint"
+  GOLANGCI_LINT_CUSTOM_BIN: "{{ .PROJECT_BIN_DIR }}/gcl-custom"
 
 tasks:
   # Tools
@@ -21,15 +22,24 @@ tasks:
             mkdir -p {{ .PROJECT_BIN_DIR }} && \
             task install-tools
 
-  # Lint
   lint:
-    desc: "Run golangci-lint"
-    cmd:  |
-          {{ .GOLANGCI_LINT_BIN }} run --fix ./...
+    desc: "Run golangci-lint with sortir plugin"
+    cmds:
+      - "{{ .GOLANGCI_LINT_BIN }} custom"
+      - mv custom-gcl {{ .GOLANGCI_LINT_CUSTOM_BIN }}
+      - |
+        go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest --fix ./...
+        {{ .GOLANGCI_LINT_CUSTOM_BIN }} run --fix ./...
+        
 
-  # Test:
+  # Test
   test:
     desc: "Run unit tests"
     cmds:
-      - go test ./... -coverprofile=coverage.out
-      - go tool cover -func=coverage.out
+      - go test ./... 
+
+  # Build
+  build:
+    desc: "Build the project"
+    cmds:
+      - go build -o {{ .PROJECT_BIN_DIR }}/sortir ./cmd/sortir

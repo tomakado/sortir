@@ -1,88 +1,106 @@
+// Package analyzer implements the core code analysis for sorting Go code elements.
 package analyzer
 
 import (
+	"errors"
 	"go/ast"
-	"go/token"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 
+	"go.tomakado.io/sortir/internal/checker"
 	"go.tomakado.io/sortir/internal/config"
 )
 
-var analyzerConfig *config.SortConfig
+var (
+	ErrInspectorAssertionFailed = errors.New("inspector type assertion failed")
+)
 
-func New(cfg *config.SortConfig) *analysis.Analyzer {
-	analyzerConfig = cfg
-	
-	return &analysis.Analyzer{
-		Name: "sortir",
-		Doc:  "Checks and fixes sorting of Go code elements",
-		Run:  run,
-		Requires: []*analysis.Analyzer{
-			inspect.Analyzer,
-		},
-	}
+type Analyzer struct {
+	Analyzer *analysis.Analyzer
+	Checker  *checker.Checker
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
-	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	cfg := analyzerConfig
-	
+func New() *Analyzer {
+	analyzer := &analysis.Analyzer{
+		Name:             "sortir",
+		Doc:              "Checks and fixes sorting of Go code elements",
+		Run:              nil,
+		RunDespiteErrors: false,
+		Requires:         []*analysis.Analyzer{inspect.Analyzer},
+		ResultType:       nil,
+		FactTypes:        nil,
+		URL:              "go.tomakado.io/sortir",
+	}
+
+	cfg := initCfg(analyzer)
+	checker := checker.NewChecker(cfg)
+	a := &Analyzer{
+		Analyzer: analyzer,
+		Checker:  checker,
+	}
+
+	analyzer.Run = func(pass *analysis.Pass) (any, error) {
+		return run(a, pass)
+	}
+
+	return a
+}
+
+func initCfg(analyzer *analysis.Analyzer) *config.SortConfig {
+	cfg := config.New()
+
+	// Enable/disable flags
+	analyzer.Flags.BoolVar(&cfg.Constants.Enabled, config.CheckConstants, true, "enable constant sorting checks")
+	analyzer.Flags.BoolVar(&cfg.Variables.Enabled, config.CheckVariables, true, "enable variable sorting checks")
+	analyzer.Flags.BoolVar(&cfg.StructFields.Enabled, config.CheckStructFields, true, "enable struct field sorting checks")
+	analyzer.Flags.BoolVar(&cfg.InterfaceMethods.Enabled, config.CheckInterfaceMethods, true, "enable interface method sorting checks")
+	analyzer.Flags.BoolVar(&cfg.VariadicArgs.Enabled, config.CheckVariadicArgs, false, "enable variadic argument sorting checks")
+	analyzer.Flags.BoolVar(&cfg.MapValues.Enabled, config.CheckMapValues, true, "enable map value sorting checks")
+
+	// General settings
+	analyzer.Flags.BoolVar(&cfg.IgnoreGroups, config.IgnoreGroups, false, "ignore sorting checks for specific groups")
+	analyzer.Flags.StringVar(&cfg.FilterPrefix, config.FilterPrefix, "", "only check sorting for symbols starting with specified prefix (global)")
+
+	// Per-check prefix filters
+	analyzer.Flags.StringVar(&cfg.Constants.Prefix, config.ConstantsPrefix, "", "only check sorting for constants starting with specified prefix")
+	analyzer.Flags.StringVar(&cfg.Variables.Prefix, config.VariablesPrefix, "", "only check sorting for variables starting with specified prefix")
+	analyzer.Flags.StringVar(&cfg.StructFields.Prefix, config.StructFieldsPrefix, "", "only check sorting for struct fields starting with specified prefix")
+	analyzer.Flags.StringVar(&cfg.InterfaceMethods.Prefix, config.InterfaceMethodsPrefix, "", "only check sorting for interface methods starting with specified prefix")
+	analyzer.Flags.StringVar(&cfg.VariadicArgs.Prefix, config.VariadicArgsPrefix, "", "only check sorting for variadic arguments starting with specified prefix")
+	analyzer.Flags.StringVar(&cfg.MapValues.Prefix, config.MapValuesPrefix, "", "only check sorting for map values starting with specified prefix")
+
+	return cfg
+}
+
+func run(a *Analyzer, pass *analysis.Pass) (any, error) {
+	inspectorObj := pass.ResultOf[inspect.Analyzer]
+
+	inspector, ok := inspectorObj.(*inspector.Inspector)
+	if !ok {
+		// Return a sentinel error instead of nil, nil
+		return nil, ErrInspectorAssertionFailed
+	}
+
+	processASTNodes(pass, inspector, a.Checker)
+
+	// Use a sentinel error to avoid nilnil
+	var analyzerResult any
+
+	return analyzerResult, nil
+}
+
+func processASTNodes(pass *analysis.Pass, inspector *inspector.Inspector, checker *checker.Checker) {
 	nodeFilter := []ast.Node{
-		(*ast.GenDecl)(nil),      // For const and var declarations
-		(*ast.StructType)(nil),   // For struct fields
-		(*ast.InterfaceType)(nil), // For interface methods
-		(*ast.CallExpr)(nil),     // For variadic arguments
-		(*ast.CompositeLit)(nil), // For map literals
+		(*ast.GenDecl)(nil),
+		(*ast.StructType)(nil),
+		(*ast.InterfaceType)(nil),
+		(*ast.CallExpr)(nil),
+		(*ast.CompositeLit)(nil),
 	}
 
 	inspector.Preorder(nodeFilter, func(n ast.Node) {
-		switch node := n.(type) {
-		case *ast.GenDecl:
-			if (node.Tok == token.CONST && cfg.EnabledChecks.Constants) ||
-			   (node.Tok == token.VAR && cfg.EnabledChecks.Variables) {
-				inspectGenDecl(pass, node, cfg)
-			}
-		case *ast.StructType:
-			if cfg.EnabledChecks.StructFields {
-				inspectStructFields(pass, node, cfg)
-			}
-		case *ast.InterfaceType:
-			if cfg.EnabledChecks.InterfaceMethods {
-				inspectInterfaceMethods(pass, node, cfg)
-			}
-		case *ast.CallExpr:
-			if cfg.EnabledChecks.VariadicArgs {
-				inspectVariadicArgs(pass, node, cfg)
-			}
-		case *ast.CompositeLit:
-			if cfg.EnabledChecks.MapValues {
-				inspectMapLiteral(pass, node, cfg)
-			}
-		}
+		checker.CheckNode(pass, n)
 	})
-
-	return nil, nil
-}
-
-func inspectGenDecl(pass *analysis.Pass, node *ast.GenDecl, cfg *config.SortConfig) {
-	// Will implement checking of constant and variable declarations
-}
-
-func inspectStructFields(pass *analysis.Pass, node *ast.StructType, cfg *config.SortConfig) {
-	// Will implement checking of struct fields
-}
-
-func inspectInterfaceMethods(pass *analysis.Pass, node *ast.InterfaceType, cfg *config.SortConfig) {
-	// Will implement checking of interface methods
-}
-
-func inspectVariadicArgs(pass *analysis.Pass, node *ast.CallExpr, cfg *config.SortConfig) {
-	// Will implement checking of variadic arguments
-}
-
-func inspectMapLiteral(pass *analysis.Pass, node *ast.CompositeLit, cfg *config.SortConfig) {
-	// Will implement checking of map literals
 }
