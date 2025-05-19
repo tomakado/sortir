@@ -88,7 +88,7 @@ func (s *CheckerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, src
 		return true
 	})
 
-	result := s.checker.checkGenDeclIfEnabled(pass, genDecl)
+	result := s.checker.checkGenDecl(pass, genDecl)
 	s.Equal(shouldPass, result)
 
 	diagnostics := s.getDiagnostics(pass)
@@ -100,7 +100,7 @@ func (s *CheckerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, src
 	}
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_ConstantsEnabled() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_ConstantsEnabled() {
 	cfg := &config.SortConfig{
 		Constants: &config.CheckConfig{
 			Enabled: true,
@@ -121,7 +121,7 @@ const (
 	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_ConstantsDisabled() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_ConstantsDisabled() {
 	cfg := &config.SortConfig{
 		Constants: &config.CheckConfig{
 			Enabled: false,
@@ -149,12 +149,12 @@ const (
 		return true
 	})
 
-	result := s.checker.checkGenDeclIfEnabled(pass, genDecl)
+	result := s.checker.checkGenDecl(pass, genDecl)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_VariablesEnabled() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_VariablesEnabled() {
 	cfg := &config.SortConfig{
 		Variables: &config.CheckConfig{
 			Enabled: true,
@@ -175,7 +175,7 @@ var (
 	s.testGenDeclSorting(cfg, src, token.VAR, false, "variable/constant declarations are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_SortedVariables() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_SortedVariables() {
 	cfg := &config.SortConfig{
 		Variables: &config.CheckConfig{
 			Enabled: true,
@@ -205,12 +205,12 @@ var (
 		return true
 	})
 
-	result := s.checker.checkGenDeclIfEnabled(pass, genDecl)
+	result := s.checker.checkGenDecl(pass, genDecl)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckStructTypeIfEnabled_Enabled() {
+func (s *CheckerMethodsTestSuite) TestCheckStructType_Enabled() {
 	cfg := &config.SortConfig{
 		StructFields: &config.CheckConfig{
 			Enabled: true,
@@ -240,7 +240,7 @@ type MyStruct struct {
 		return true
 	})
 
-	result := s.checker.checkStructTypeIfEnabled(pass, structType)
+	result := s.checker.checkStructType(pass, structType)
 	s.False(result)
 
 	diagnostics := s.getDiagnostics(pass)
@@ -248,7 +248,7 @@ type MyStruct struct {
 	s.Contains(diagnostics[0].Message, "struct fields are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckStructTypeIfEnabled_Disabled() {
+func (s *CheckerMethodsTestSuite) TestCheckStructType_Disabled() {
 	cfg := &config.SortConfig{
 		StructFields: &config.CheckConfig{
 			Enabled: false,
@@ -276,12 +276,12 @@ type MyStruct struct {
 		return true
 	})
 
-	result := s.checker.checkStructTypeIfEnabled(pass, structType)
+	result := s.checker.checkStructType(pass, structType)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckStructTypeIfEnabled_Sorted() {
+func (s *CheckerMethodsTestSuite) TestCheckStructType_Sorted() {
 	cfg := &config.SortConfig{
 		StructFields: &config.CheckConfig{
 			Enabled: true,
@@ -311,12 +311,12 @@ type MyStruct struct {
 		return true
 	})
 
-	result := s.checker.checkStructTypeIfEnabled(pass, structType)
+	result := s.checker.checkStructType(pass, structType)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckInterfaceTypeIfEnabled_Enabled() {
+func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_Enabled() {
 	cfg := &config.SortConfig{
 		InterfaceMethods: &config.CheckConfig{
 			Enabled: true,
@@ -346,7 +346,7 @@ type MyInterface interface {
 		return true
 	})
 
-	result := s.checker.checkInterfaceTypeIfEnabled(pass, interfaceType)
+	result := s.checker.checkInterfaceType(pass, interfaceType)
 	s.False(result)
 
 	diagnostics := s.getDiagnostics(pass)
@@ -354,7 +354,7 @@ type MyInterface interface {
 	s.Contains(diagnostics[0].Message, "interface methods are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckInterfaceTypeIfEnabled_Disabled() {
+func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_Disabled() {
 	cfg := &config.SortConfig{
 		InterfaceMethods: &config.CheckConfig{
 			Enabled: false,
@@ -382,12 +382,12 @@ type MyInterface interface {
 		return true
 	})
 
-	result := s.checker.checkInterfaceTypeIfEnabled(pass, interfaceType)
+	result := s.checker.checkInterfaceType(pass, interfaceType)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCallExprIfEnabled_Enabled() {
+func (s *CheckerMethodsTestSuite) TestCheckCallExpr_Enabled() {
 	cfg := &config.SortConfig{
 		VariadicArgs: &config.CheckConfig{
 			Enabled: true,
@@ -420,7 +420,7 @@ func test() {
 		return true
 	})
 
-	result := s.checker.checkCallExprIfEnabled(pass, callExpr)
+	result := s.checker.checkCallExpr(pass, callExpr)
 	s.False(result)
 
 	diagnostics := s.getDiagnostics(pass)
@@ -428,7 +428,7 @@ func test() {
 	s.Contains(diagnostics[0].Message, "variadic arguments are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCallExprIfEnabled_Disabled() {
+func (s *CheckerMethodsTestSuite) TestCheckCallExpr_Disabled() {
 	cfg := &config.SortConfig{
 		VariadicArgs: &config.CheckConfig{
 			Enabled: false,
@@ -459,12 +459,12 @@ func test() {
 		return true
 	})
 
-	result := s.checker.checkCallExprIfEnabled(pass, callExpr)
+	result := s.checker.checkCallExpr(pass, callExpr)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCompositeLitIfEnabled_Enabled() {
+func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_Enabled() {
 	cfg := &config.SortConfig{
 		MapKeys: &config.CheckConfig{
 			Enabled: true,
@@ -494,7 +494,7 @@ var m = map[string]int{
 		return true
 	})
 
-	result := s.checker.checkCompositeLitIfEnabled(pass, compositeLit)
+	result := s.checker.checkCompositeLit(pass, compositeLit)
 	s.False(result)
 
 	diagnostics := s.getDiagnostics(pass)
@@ -502,7 +502,7 @@ var m = map[string]int{
 	s.Contains(diagnostics[0].Message, "map keys are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCompositeLitIfEnabled_Disabled() {
+func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_Disabled() {
 	cfg := &config.SortConfig{
 		MapKeys: &config.CheckConfig{
 			Enabled: false,
@@ -530,12 +530,12 @@ var m = map[string]int{
 		return true
 	})
 
-	result := s.checker.checkCompositeLitIfEnabled(pass, compositeLit)
+	result := s.checker.checkCompositeLit(pass, compositeLit)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_GlobalPrefix() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_GlobalPrefix() {
 	cfg := &config.SortConfig{
 		Constants: &config.CheckConfig{
 			Enabled: true,
@@ -557,7 +557,7 @@ const (
 	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckGenDeclIfEnabled_IgnoreGroups() {
+func (s *CheckerMethodsTestSuite) TestCheckGenDecl_IgnoreGroups() {
 	cfg := &config.SortConfig{
 		Constants: &config.CheckConfig{
 			Enabled: true,
@@ -580,7 +580,7 @@ const (
 	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckStructTypeIfEnabled_EmptyFieldList() {
+func (s *CheckerMethodsTestSuite) TestCheckStructType_EmptyFieldList() {
 	cfg := &config.SortConfig{
 		StructFields: &config.CheckConfig{
 			Enabled: true,
@@ -608,12 +608,12 @@ type MyStruct struct {
 		return true
 	})
 
-	result := s.checker.checkStructTypeIfEnabled(pass, structType)
+	result := s.checker.checkStructType(pass, structType)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckInterfaceTypeIfEnabled_EmptyMethodList() {
+func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_EmptyMethodList() {
 	cfg := &config.SortConfig{
 		InterfaceMethods: &config.CheckConfig{
 			Enabled: true,
@@ -641,12 +641,12 @@ type MyInterface interface {
 		return true
 	})
 
-	result := s.checker.checkInterfaceTypeIfEnabled(pass, interfaceType)
+	result := s.checker.checkInterfaceType(pass, interfaceType)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCallExprIfEnabled_NonVariadic() {
+func (s *CheckerMethodsTestSuite) TestCheckCallExpr_NonVariadic() {
 	cfg := &config.SortConfig{
 		VariadicArgs: &config.CheckConfig{
 			Enabled: true,
@@ -679,12 +679,12 @@ func test() {
 		return true
 	})
 
-	result := s.checker.checkCallExprIfEnabled(pass, callExpr)
+	result := s.checker.checkCallExpr(pass, callExpr)
 	s.True(result)
 	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *CheckerMethodsTestSuite) TestCheckCompositeLitIfEnabled_StructLiteral() {
+func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_StructLiteral() {
 	cfg := &config.SortConfig{
 		MapKeys: &config.CheckConfig{
 			Enabled: true,
@@ -720,7 +720,7 @@ var s = MyStruct{
 		return true
 	})
 
-	result := s.checker.checkCompositeLitIfEnabled(pass, structLiteral)
+	result := s.checker.checkCompositeLit(pass, structLiteral)
 	s.False(result, "struct field literals with unsorted keys should return false")
 	s.Len(s.getDiagnostics(pass), 1, "should have one diagnostic for unsorted struct fields")
 
@@ -744,7 +744,7 @@ var m = map[string]int{
 		return true
 	})
 
-	result = s.checker.checkCompositeLitIfEnabled(pass2, mapLiteral)
+	result = s.checker.checkCompositeLit(pass2, mapLiteral)
 	s.False(result, "map literal with unsorted keys should return false")
 	s.Len(s.getDiagnostics(pass2), 1, "should have one diagnostic for unsorted map keys")
 }

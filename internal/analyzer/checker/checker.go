@@ -24,20 +24,20 @@ func NewChecker(cfg *config.SortConfig) *Checker {
 func (c *Checker) CheckNode(pass *analysis.Pass, node ast.Node) bool {
 	switch n := node.(type) {
 	case *ast.GenDecl:
-		return c.checkGenDeclIfEnabled(pass, n)
+		return c.checkGenDecl(pass, n)
 	case *ast.StructType:
-		return c.checkStructTypeIfEnabled(pass, n)
+		return c.checkStructType(pass, n)
 	case *ast.InterfaceType:
-		return c.checkInterfaceTypeIfEnabled(pass, n)
+		return c.checkInterfaceType(pass, n)
 	case *ast.CallExpr:
-		return c.checkCallExprIfEnabled(pass, n)
+		return c.checkCallExpr(pass, n)
 	case *ast.CompositeLit:
-		return c.checkCompositeLitIfEnabled(pass, n)
+		return c.checkCompositeLit(pass, n)
 	}
 	return true
 }
 
-func (c *Checker) checkGenDeclIfEnabled(pass *analysis.Pass, node *ast.GenDecl) bool {
+func (c *Checker) checkGenDecl(pass *analysis.Pass, node *ast.GenDecl) bool {
 	var prefix string
 	switch node.Tok {
 	case token.CONST:
@@ -69,7 +69,7 @@ func (c *Checker) checkGenDeclIfEnabled(pass *analysis.Pass, node *ast.GenDecl) 
 	)
 }
 
-func (c *Checker) checkStructTypeIfEnabled(pass *analysis.Pass, node *ast.StructType) bool {
+func (c *Checker) checkStructType(pass *analysis.Pass, node *ast.StructType) bool {
 	if !c.Config.StructFields.Enabled {
 		return true
 	}
@@ -84,7 +84,7 @@ func (c *Checker) checkStructTypeIfEnabled(pass *analysis.Pass, node *ast.Struct
 	)
 }
 
-func (c *Checker) checkInterfaceTypeIfEnabled(pass *analysis.Pass, node *ast.InterfaceType) bool {
+func (c *Checker) checkInterfaceType(pass *analysis.Pass, node *ast.InterfaceType) bool {
 	if !c.Config.InterfaceMethods.Enabled {
 		return true
 	}
@@ -99,7 +99,7 @@ func (c *Checker) checkInterfaceTypeIfEnabled(pass *analysis.Pass, node *ast.Int
 	)
 }
 
-func (c *Checker) checkCallExprIfEnabled(pass *analysis.Pass, node *ast.CallExpr) bool {
+func (c *Checker) checkCallExpr(pass *analysis.Pass, node *ast.CallExpr) bool {
 	if !c.Config.VariadicArgs.Enabled {
 		return true
 	}
@@ -114,7 +114,7 @@ func (c *Checker) checkCallExprIfEnabled(pass *analysis.Pass, node *ast.CallExpr
 	)
 }
 
-func (c *Checker) checkCompositeLitIfEnabled(pass *analysis.Pass, node *ast.CompositeLit) bool {
+func (c *Checker) checkCompositeLit(pass *analysis.Pass, node *ast.CompositeLit) bool {
 	if !c.Config.MapKeys.Enabled {
 		return true
 	}
