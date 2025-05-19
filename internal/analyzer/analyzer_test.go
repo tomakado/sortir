@@ -51,7 +51,7 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = "Pref"
+		cfg.GlobalPrefix = "Pref"
 		a.Checker.Config = &cfg
 
 		analysistest.Run(t, testdata, a.Analyzer, "filterprefix/global")
@@ -62,7 +62,7 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = ""
+		cfg.GlobalPrefix = ""
 		cfg.Constants.Prefix = "Pref"
 		a.Checker.Config = &cfg
 
@@ -74,7 +74,7 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = ""
+		cfg.GlobalPrefix = ""
 		cfg.InterfaceMethods.Prefix = "Pref"
 		a.Checker.Config = &cfg
 
@@ -86,7 +86,7 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = ""
+		cfg.GlobalPrefix = ""
 		cfg.StructFields.Prefix = "Pref"
 		a.Checker.Config = &cfg
 
@@ -98,8 +98,8 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = ""
-		cfg.MapValues.Prefix = "Pref"
+		cfg.GlobalPrefix = ""
+		cfg.MapKeys.Prefix = "Pref"
 		a.Checker.Config = &cfg
 
 		analysistest.Run(t, testdata, a.Analyzer, "filterprefix/maps")
@@ -110,7 +110,7 @@ func TestAnalyzerWithPrefix(t *testing.T) {
 
 		a := analyzer.New()
 		cfg := *a.Checker.Config
-		cfg.FilterPrefix = ""
+		cfg.GlobalPrefix = ""
 		cfg.VariadicArgs.Enabled = true
 		cfg.VariadicArgs.Prefix = "Pref"
 		a.Checker.Config = &cfg

@@ -162,7 +162,6 @@ func extractStructField(pass *analysis.Pass, node *ast.Field) (string, token.Pos
 	return value, pos, line
 }
 
-// func extractGenDecl(pass *analysis.Pass, node *ast.ValueSpec) (string, token.Pos, int) {
 func extractGenDecl(pass *analysis.Pass, node *ast.ValueSpec) (string, token.Pos, int) {
 	value := node.Names[0].Name
 	pos := node.Names[0].Pos()

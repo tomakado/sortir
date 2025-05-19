@@ -1,23 +1,26 @@
 package config
 
 const (
-	// Check enabling flags
-	CheckConstants        = "check-constants"
-	CheckVariables        = "check-variables"
-	CheckStructFields     = "check-struct-fields"
-	CheckInterfaceMethods = "check-interface-methods"
-	CheckVariadicArgs     = "check-variadic-args"
-	CheckMapValues        = "check-map-values"
+	FlagIgnoreGroups = "ignore-groups"
+	FlagFilterPrefix = "filter-prefix"
+	FlagFix          = "fix"
+	FlagVerbose      = "verbose"
 
-	// General configuration flags
-	IgnoreGroups = "ignore-groups"
-	FilterPrefix = "filter-prefix"
+	FlagConstants       = "constants"
+	FlagConstantsPrefix = "constants.prefix"
 
-	// Per-check filter prefix flags
-	ConstantsPrefix        = "constants-prefix"
-	VariablesPrefix        = "variables-prefix"
-	StructFieldsPrefix     = "struct-fields-prefix"
-	InterfaceMethodsPrefix = "interface-methods-prefix"
-	VariadicArgsPrefix     = "variadic-args-prefix"
-	MapValuesPrefix        = "map-values-prefix"
+	FlagVariables       = "variables"
+	FlagVariablesPrefix = "variables.prefix"
+
+	FlagStructFields       = "struct-fields"
+	FlagStructFieldsPrefix = "struct-fields.prefix"
+
+	FlagInterfaceMethods       = "interface-methods"
+	FlagInterfaceMethodsPrefix = "interface-methods.prefix"
+
+	FlagVariadicArgs       = "variadic-args"
+	FlagVariadicArgsPrefix = "variadic-args.prefix"
+
+	FlagMapKeys       = "map-keys"
+	FlagMapKeysPrefix = "map-keys.prefix"
 )

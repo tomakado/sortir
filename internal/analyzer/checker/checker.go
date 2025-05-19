@@ -64,7 +64,7 @@ func (c *Checker) checkGenDeclIfEnabled(pass *analysis.Pass, node *ast.GenDecl) 
 		pass,
 		metadata,
 		prefix,
-		c.Config.FilterPrefix,
+		c.Config.GlobalPrefix,
 		"variable/constant declarations are not sorted",
 	)
 }
@@ -79,7 +79,7 @@ func (c *Checker) checkStructTypeIfEnabled(pass *analysis.Pass, node *ast.Struct
 		pass,
 		metadata,
 		c.Config.StructFields.Prefix,
-		c.Config.FilterPrefix,
+		c.Config.GlobalPrefix,
 		"struct fields are not sorted",
 	)
 }
@@ -94,7 +94,7 @@ func (c *Checker) checkInterfaceTypeIfEnabled(pass *analysis.Pass, node *ast.Int
 		pass,
 		metadata,
 		c.Config.InterfaceMethods.Prefix,
-		c.Config.FilterPrefix,
+		c.Config.GlobalPrefix,
 		"interface methods are not sorted",
 	)
 }
@@ -109,13 +109,13 @@ func (c *Checker) checkCallExprIfEnabled(pass *analysis.Pass, node *ast.CallExpr
 		pass,
 		metadata,
 		c.Config.VariadicArgs.Prefix,
-		c.Config.FilterPrefix,
+		c.Config.GlobalPrefix,
 		"variadic arguments are not sorted",
 	)
 }
 
 func (c *Checker) checkCompositeLitIfEnabled(pass *analysis.Pass, node *ast.CompositeLit) bool {
-	if !c.Config.MapValues.Enabled {
+	if !c.Config.MapKeys.Enabled {
 		return true
 	}
 
@@ -130,8 +130,8 @@ func (c *Checker) checkCompositeLitIfEnabled(pass *analysis.Pass, node *ast.Comp
 	return checkElementsSorted(
 		pass,
 		metadata,
-		c.Config.MapValues.Prefix,
-		c.Config.FilterPrefix,
+		c.Config.MapKeys.Prefix,
+		c.Config.GlobalPrefix,
 		"map keys are not sorted",
 	)
 }

@@ -5,7 +5,7 @@
 ignoreGroups: false
 
 # Filter elements with a specific prefix. Elements without this prefix will be excluded from sorting.
-filterPrefix: ""
+prefix: ""
 
 # Check constant declarations (const blocks)
 constants:
@@ -33,7 +33,7 @@ variadicArgs:
  prefix: ""
 
 # Check map literal value ordering by key
-mapValues:
+mapKeys:
  enabled: true
  prefix: ""
 
