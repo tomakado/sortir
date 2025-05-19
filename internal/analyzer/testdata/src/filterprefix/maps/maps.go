@@ -2,7 +2,7 @@ package maps
 
 var map1 = map[string]int{
 	"PrefB": 1,
-	"PrefA": 2, // want "map keys are not sorted"
+	"PrefA": 2, // want "composite literal elements are not sorted"
 }
 
 var map2 = map[string]int{

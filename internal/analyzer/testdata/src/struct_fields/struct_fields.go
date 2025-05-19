@@ -23,7 +23,7 @@ type SortedWithEmbedded struct {
 // Unsorted struct with embedded fields
 type UnsortedWithEmbedded struct {
 	B
-	A      // want "embedded fields are not sorted"
+	A      // want "struct fields are not sorted"
 	CField int
 	DField int
 }
@@ -62,4 +62,18 @@ type B struct{}
 // Placeholder for filter test
 type PlaceholderStruct struct {
 	Field int
+}
+
+// Struct init, sorted
+var sortedStruct = SortedStruct{
+	A: 1,
+	B: 2,
+}
+
+// Struct init, unsorted
+func foo() {
+	_ = SortedStruct{
+		B: 2,
+		A: 1, // want "composite literal elements are not sorted"
+	}
 }

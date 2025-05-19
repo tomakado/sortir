@@ -2,6 +2,7 @@
 package checker
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -149,7 +150,7 @@ func (c *Checker) checkCallExpr(pass *analysis.Pass, node *ast.CallExpr) bool {
 }
 
 func (c *Checker) checkCompositeLit(pass *analysis.Pass, node *ast.CompositeLit) bool {
-	c.logger.Verbose("Processing map keys", log.FieldEnabled, c.Config.MapKeys.Enabled, log.FieldPrefix, c.Config.MapKeys.Prefix)
+	c.logger.Verbose("Processing map keys", "composite_lit_type", fmt.Sprintf("%#v", node.Type), log.FieldEnabled, c.Config.MapKeys.Enabled, log.FieldPrefix, c.Config.MapKeys.Prefix)
 	if !c.Config.MapKeys.Enabled {
 		c.logger.Verbose("Skipping map key checks")
 		return true
@@ -170,7 +171,7 @@ func (c *Checker) checkCompositeLit(pass *analysis.Pass, node *ast.CompositeLit)
 		metadata,
 		c.Config.MapKeys.Prefix,
 		c.Config.GlobalPrefix,
-		"map keys are not sorted",
+		"composite literal elements are not sorted",
 		c.logger,
 	)
 }

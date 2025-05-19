@@ -499,7 +499,7 @@ var m = map[string]int{
 
 	diagnostics := s.getDiagnostics(pass)
 	s.Len(diagnostics, 1)
-	s.Contains(diagnostics[0].Message, "map keys are not sorted")
+	s.Contains(diagnostics[0].Message, "composite literal elements are not sorted")
 }
 
 func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_Disabled() {

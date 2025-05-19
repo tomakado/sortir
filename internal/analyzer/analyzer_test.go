@@ -20,7 +20,7 @@ func TestAnalyzer(t *testing.T) {
 			"basic",
 			"constants",
 			"variables",
-			"structs",
+			"struct_fields",
 			"interfaces",
 			"variadic/disabled",
 			"map_keys",

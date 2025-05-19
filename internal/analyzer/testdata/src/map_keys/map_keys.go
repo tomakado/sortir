@@ -10,7 +10,7 @@ var sortedStringMap = map[string]int{
 // Unsorted string keys
 var unsortedStringMap = map[string]int{
 	"c": 3,
-	"a": 1, // want "map keys are not sorted"
+	"a": 1, // want "composite literal elements are not sorted"
 	"b": 2,
 }
 
@@ -24,7 +24,7 @@ var sortedIntMap = map[int]string{
 // Unsorted int keys
 var unsortedIntMap = map[int]string{
 	3: "c",
-	1: "a", // want "map keys are not sorted"
+	1: "a", // want "composite literal elements are not sorted"
 	2: "b",
 }
 
@@ -40,11 +40,11 @@ var mapWithGroups = map[string]int{
 // Unsorted map with groups
 var unsortedMapWithGroups = map[string]int{
 	"b": 2,
-	"a": 1, // want "map keys are not sorted"
+	"a": 1, // want "composite literal elements are not sorted"
 
 	// Empty line resets sorting with default config
 	"d": 4,
-	"c": 3, // want "map keys are not sorted"
+	"c": 3, // want "composite literal elements are not sorted"
 }
 
 // Non-sortable key type (not checked)
