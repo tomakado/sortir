@@ -2,8 +2,8 @@
 package analyzer
 
 import (
-	"errors"
 	"go/ast"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -11,41 +11,79 @@ import (
 
 	"go.tomakado.io/sortir/internal/analyzer/checker"
 	"go.tomakado.io/sortir/internal/config"
-)
-
-var (
-	ErrInspectorAssertionFailed = errors.New("inspector type assertion failed")
+	"go.tomakado.io/sortir/internal/log"
 )
 
 type Analyzer struct {
-	Analyzer *analysis.Analyzer
-	Checker  *checker.Checker
+	cfg      *config.SortConfig
+	initOnce sync.Once
+
+	analyzer *analysis.Analyzer
+	checker  *checker.Checker
+	logger   *log.Logger
 }
 
 func New() *Analyzer {
 	analyzer := &analysis.Analyzer{
 		Name:             "sortir",
 		Doc:              "Checks and fixes sorting of Go code elements",
-		Run:              nil,
 		RunDespiteErrors: false,
 		Requires:         []*analysis.Analyzer{inspect.Analyzer},
-		ResultType:       nil,
-		FactTypes:        nil,
 		URL:              "go.tomakado.io/sortir",
 	}
 
-	cfg := initCfg(analyzer)
-	checker := checker.NewChecker(cfg)
 	a := &Analyzer{
-		Analyzer: analyzer,
-		Checker:  checker,
+		cfg:      initCfg(analyzer),
+		analyzer: analyzer,
 	}
-
-	analyzer.Run = func(pass *analysis.Pass) (any, error) {
-		return run(a, pass)
-	}
+	analyzer.Run = a.run
 
 	return a
+}
+
+func (a *Analyzer) Analyzer() *analysis.Analyzer {
+	return a.analyzer
+}
+
+func (a *Analyzer) Checker() *checker.Checker {
+	a.initState()
+	return a.checker
+}
+
+func (a *Analyzer) run(pass *analysis.Pass) (any, error) {
+	a.initState()
+
+	a.logger.Verbose("Starting analysis", log.FieldPackage, pass.Pkg.Path())
+
+	inspectorObj := pass.ResultOf[inspect.Analyzer]
+
+	inspector, ok := inspectorObj.(*inspector.Inspector)
+	if !ok {
+		panic("inspectorObj is not *inspector.Inspector")
+	}
+
+	a.logger.Verbose("Processing AST nodes")
+	nodeFilter := []ast.Node{
+		(*ast.GenDecl)(nil),
+		(*ast.StructType)(nil),
+		(*ast.InterfaceType)(nil),
+		(*ast.CallExpr)(nil),
+		(*ast.CompositeLit)(nil),
+	}
+
+	inspector.Preorder(nodeFilter, func(n ast.Node) {
+		a.checker.CheckNode(pass, n)
+	})
+
+	a.logger.Verbose("Analysis complete", log.FieldPackage, pass.Pkg.Path())
+	return nil, nil
+}
+
+func (a *Analyzer) initState() {
+	a.initOnce.Do(func() {
+		a.logger = log.New(a.cfg.LogLevel())
+		a.checker = checker.New(a.cfg).WithLogger(a.logger)
+	})
 }
 
 func initCfg(analyzer *analysis.Analyzer) *config.SortConfig {
@@ -53,6 +91,7 @@ func initCfg(analyzer *analysis.Analyzer) *config.SortConfig {
 
 	analyzer.Flags.StringVar(&cfg.GlobalPrefix, config.FlagFilterPrefix, "", "only check sorting for symbols starting with specified prefix (global)")
 	analyzer.Flags.BoolVar(&cfg.IgnoreGroups, config.FlagIgnoreGroups, false, "ignore sorting checks for specific groups")
+	analyzer.Flags.BoolVar(&cfg.Verbose, config.FlagVerbose, false, "enable verbose logging")
 
 	analyzer.Flags.BoolVar(&cfg.Constants.Enabled, config.FlagConstants, true, "enable constant sorting checks")
 	analyzer.Flags.StringVar(&cfg.Constants.Prefix, config.FlagConstantsPrefix, "", "only check sorting for constants starting with specified prefix")
@@ -73,35 +112,4 @@ func initCfg(analyzer *analysis.Analyzer) *config.SortConfig {
 	analyzer.Flags.StringVar(&cfg.MapKeys.Prefix, config.FlagMapKeysPrefix, "", "only check sorting for map values starting with specified prefix")
 
 	return cfg
-}
-
-func run(a *Analyzer, pass *analysis.Pass) (any, error) {
-	inspectorObj := pass.ResultOf[inspect.Analyzer]
-
-	inspector, ok := inspectorObj.(*inspector.Inspector)
-	if !ok {
-		// Return a sentinel error instead of nil, nil
-		return nil, ErrInspectorAssertionFailed
-	}
-
-	processASTNodes(pass, inspector, a.Checker)
-
-	// Use a sentinel error to avoid nilnil
-	var analyzerResult any
-
-	return analyzerResult, nil
-}
-
-func processASTNodes(pass *analysis.Pass, inspector *inspector.Inspector, checker *checker.Checker) {
-	nodeFilter := []ast.Node{
-		(*ast.GenDecl)(nil),
-		(*ast.StructType)(nil),
-		(*ast.InterfaceType)(nil),
-		(*ast.CallExpr)(nil),
-		(*ast.CompositeLit)(nil),
-	}
-
-	inspector.Preorder(nodeFilter, func(n ast.Node) {
-		checker.CheckNode(pass, n)
-	})
 }

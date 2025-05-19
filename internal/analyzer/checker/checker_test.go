@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.tomakado.io/sortir/internal/log"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -28,7 +29,7 @@ func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata[ast.Node], pre
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, prefix, globalPrefix, message)
+	result := checkElementsSorted(pass, groups, prefix, globalPrefix, message, log.New(log.Important))
 	s.Require().Equal(shouldPass, result)
 	return reported
 }
@@ -51,7 +52,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -74,7 +75,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(2), reported[0].Pos)
@@ -102,7 +103,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(5), reported[0].Pos)
@@ -120,7 +121,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -141,7 +142,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -164,7 +165,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFiltering() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -216,7 +217,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "localPrefix", "globalPrefix", "test message")
+	result := checkElementsSorted(pass, groups, "localPrefix", "globalPrefix", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -239,7 +240,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -262,7 +263,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllElementsFilteredOut() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -306,7 +307,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NilGroups() {
 		},
 	}
 
-	result := checkElementsSorted[ast.Node](pass, nil, "", "", "test message")
+	result := checkElementsSorted[ast.Node](pass, nil, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -328,7 +329,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix(
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(2), reported[0].Pos)
@@ -352,7 +353,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_IdenticalValues() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message")
+	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }

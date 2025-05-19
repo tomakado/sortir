@@ -76,7 +76,7 @@ func (s *CheckerMethodsTestSuite) getDiagnostics(pass *analysis.Pass) []analysis
 }
 
 func (s *CheckerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, src string, expectedToken token.Token, shouldPass bool, expectedError string) {
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 	pass := s.createPass(src)
 
 	var genDecl *ast.GenDecl
@@ -128,7 +128,7 @@ func (s *CheckerMethodsTestSuite) TestCheckGenDecl_ConstantsDisabled() {
 		},
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -184,7 +184,7 @@ func (s *CheckerMethodsTestSuite) TestCheckGenDecl_SortedVariables() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -219,7 +219,7 @@ func (s *CheckerMethodsTestSuite) TestCheckStructType_Enabled() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -255,7 +255,7 @@ func (s *CheckerMethodsTestSuite) TestCheckStructType_Disabled() {
 		},
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -290,7 +290,7 @@ func (s *CheckerMethodsTestSuite) TestCheckStructType_Sorted() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -325,7 +325,7 @@ func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_Enabled() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -361,7 +361,7 @@ func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_Disabled() {
 		},
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -396,7 +396,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCallExpr_Enabled() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -435,7 +435,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCallExpr_Disabled() {
 		},
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -473,7 +473,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_Enabled() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -509,7 +509,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_Disabled() {
 		},
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -589,7 +589,7 @@ func (s *CheckerMethodsTestSuite) TestCheckStructType_EmptyFieldList() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -622,7 +622,7 @@ func (s *CheckerMethodsTestSuite) TestCheckInterfaceType_EmptyMethodList() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -655,7 +655,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCallExpr_NonVariadic() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	src := `
 package test
@@ -693,7 +693,7 @@ func (s *CheckerMethodsTestSuite) TestCheckCompositeLit_StructLiteral() {
 		GlobalPrefix: "",
 		IgnoreGroups: false,
 	}
-	s.checker = NewChecker(cfg)
+	s.checker = New(cfg)
 
 	// Test with struct field literals - current implementation checks KeyValueExpr regardless of type
 	src := `

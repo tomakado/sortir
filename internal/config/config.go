@@ -1,5 +1,7 @@
 package config
 
+import "go.tomakado.io/sortir/internal/log"
+
 type CheckConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	Prefix  string `yaml:"prefix"`
@@ -51,4 +53,12 @@ func New() *SortConfig {
 			Prefix:  "",
 		},
 	}
+}
+
+func (c *SortConfig) LogLevel() log.Level {
+	if c.Verbose {
+		return log.Verbose
+	}
+
+	return log.Important
 }

@@ -11,5 +11,5 @@ import (
 
 func main() {
 	analyzer := analyzer.New()
-	singlechecker.Main(analyzer.Analyzer)
+	singlechecker.Main(analyzer.Analyzer())
 }
