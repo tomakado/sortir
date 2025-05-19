@@ -1,0 +1,428 @@
+package checker
+
+import (
+	"go/ast"
+	"go/token"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/tools/go/analysis"
+)
+
+type mockNode struct{}
+
+func (m *mockNode) Pos() token.Pos { return token.NoPos }
+func (m *mockNode) End() token.Pos { return token.NoPos }
+
+type CheckerTestSuite struct {
+	suite.Suite
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(2), reported[0].Pos)
+	s.Require().Equal("test message", reported[0].Message)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+		},
+		{
+			{Value: "d", Position: token.Pos(4), Line: 4, Node: &mockNode{}},
+			{Value: "c", Position: token.Pos(5), Line: 5, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(5), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{{}}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}}},
+		{{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}}},
+		{{Value: "b", Position: token.Pos(3), Line: 3, Node: &mockNode{}}},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFiltering() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "prefixA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "notPrefixed", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "prefixB", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFilteringNotSorted() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "prefixB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "z", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+			{Value: "prefixA", Position: token.Pos(4), Line: 4, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(4), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_WithGlobalPrefix() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "globalPrefixB", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "otherThing", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "globalPrefixA", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "globalPrefix", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(3), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "localPrefixA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "globalPrefixZ", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "localPrefixB", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "localPrefix", "globalPrefix", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "b", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_AllElementsFilteredOut() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "otherA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "otherB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "otherC", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_MixedPrefixedAndNonPrefixed() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "otherA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "prefixB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "z", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+			{Value: "prefixA", Position: token.Pos(4), Line: 4, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "prefix", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(4), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleSortingIssuesReportsFirst() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(2), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_NilGroups() {
+	t := s.T()
+	t.Parallel()
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted[ast.Node](pass, nil, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(2), reported[0].Pos)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_IdenticalValues() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().True(result)
+	s.Require().Empty(reported)
+}
+
+func (s *CheckerTestSuite) TestCheckElementsSorted_BreakAfterFirstReport() {
+	t := s.T()
+	t.Parallel()
+
+	groups := [][]metadata[ast.Node]{
+		{
+			{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+			{Value: "a", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+		},
+	}
+
+	reported := []analysis.Diagnostic{}
+	pass := &analysis.Pass{
+		Report: func(d analysis.Diagnostic) {
+			reported = append(reported, d)
+		},
+	}
+
+	result := checkElementsSorted(pass, groups, "", "", "test message")
+	s.Require().False(result)
+	s.Require().Len(reported, 1)
+	s.Require().Equal(token.Pos(2), reported[0].Pos)
+}
+
+func TestCheckerTestSuite(t *testing.T) {
+	suite.Run(t, new(CheckerTestSuite))
+}

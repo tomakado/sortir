@@ -6,8 +6,6 @@ import (
 	"go/types"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/tools/go/analysis"
 )
@@ -33,7 +31,7 @@ func (s *ExtractTestSuite) SetupTest() {
 	// Line 9: offset 80-89
 	// Line 10: offset 90-99
 	file.SetLines([]int{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100})
-	
+
 	s.pass = &analysis.Pass{
 		Fset: s.fset,
 		TypesInfo: &types.Info{
@@ -79,23 +77,23 @@ func (s *ExtractTestSuite) TestExtractMapKey() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			keyPos := token.Pos(15)
-			
+
 			switch k := tt.key.(type) {
 			case *ast.BasicLit:
 				k.ValuePos = keyPos
 			case *ast.Ident:
 				k.NamePos = keyPos
 			}
-			
+
 			node := &ast.KeyValueExpr{
 				Key:   tt.key,
 				Value: &ast.BasicLit{},
 			}
-			
+
 			value, pos, line := extractMapKey(s.pass, node)
-			assert.Equal(s.T(), tt.expected, value)
-			assert.Equal(s.T(), keyPos, pos)
-			assert.Equal(s.T(), 2, line)
+			s.Assert().Equal(tt.expected, value)
+			s.Assert().Equal(keyPos, pos)
+			s.Assert().Equal(2, line)
 		})
 	}
 }
@@ -147,16 +145,16 @@ func (s *ExtractTestSuite) TestExtractStructField() {
 		s.Run(tt.name, func() {
 			setFieldPosition(tt.field, token.Pos(25))
 			value, pos, line := extractStructField(s.pass, tt.field)
-			assert.Equal(s.T(), tt.expected, value)
-			
+			s.Require().Equal(tt.expected, value)
+
 			// For struct fields, the position is field.Pos(), which might be 0
 			// for embedded fields without position info
 			if pos == 0 {
-				assert.Equal(s.T(), token.Pos(0), pos)
-				assert.Equal(s.T(), 0, line)
+				s.Require().Equal(token.Pos(0), pos)
+				s.Require().Equal(0, line)
 			} else {
-				assert.Equal(s.T(), token.Pos(25), pos)
-				assert.Equal(s.T(), 3, line)
+				s.Require().Equal(token.Pos(25), pos)
+				s.Require().Equal(3, line)
 			}
 		})
 	}
@@ -199,9 +197,9 @@ func (s *ExtractTestSuite) TestExtractGenDecl() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			value, pos, line := extractGenDecl(s.pass, tt.spec)
-			assert.Equal(s.T(), tt.expected, value)
-			assert.Equal(s.T(), token.Pos(35), pos)
-			assert.Equal(s.T(), 4, line)
+			s.Assert().Equal(tt.expected, value)
+			s.Assert().Equal(token.Pos(35), pos)
+			s.Assert().Equal(4, line)
 		})
 	}
 }
@@ -250,20 +248,20 @@ func (s *ExtractTestSuite) TestExtractInterfaceMethod() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			value, pos, line := extractInterfaceMethod(s.pass, tt.field)
-			assert.Equal(s.T(), tt.expected, value)
-			
+			s.Assert().Equal(tt.expected, value)
+
 			// For interface methods, line number depends on pass.Fset.File(pos).Line(pos)
 			// which might fail if pos is 0
 			if pos == 0 {
-				assert.Equal(s.T(), 0, line)
+				s.Assert().Equal(0, line)
 			} else {
-				assert.Equal(s.T(), tt.line, line)
+				s.Assert().Equal(tt.line, line)
 			}
-			
+
 			if tt.field.Names != nil {
-				assert.Equal(s.T(), tt.field.Names[0].Pos(), pos)
+				s.Assert().Equal(tt.field.Names[0].Pos(), pos)
 			} else {
-				assert.Equal(s.T(), tt.field.Type.Pos(), pos)
+				s.Assert().Equal(tt.field.Type.Pos(), pos)
 			}
 		})
 	}
@@ -306,15 +304,15 @@ func (s *ExtractTestSuite) TestExtractVariadicArg() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			value, pos, line := extractVariadicArg(s.pass, tt.arg)
-			assert.Equal(s.T(), tt.expected, value)
-			
+			s.Assert().Equal(tt.expected, value)
+
 			// For variadic args, position may be 0 for complex expressions
 			if pos == 0 {
-				assert.Equal(s.T(), 0, pos)
-				assert.Equal(s.T(), 0, line)
+				s.Assert().Equal(0, pos)
+				s.Assert().Equal(0, line)
 			} else {
-				assert.Equal(s.T(), token.Pos(15), pos)
-				assert.Equal(s.T(), 2, line)
+				s.Assert().Equal(token.Pos(15), pos)
+				s.Assert().Equal(2, line)
 			}
 		})
 	}
@@ -350,7 +348,7 @@ func (s *ExtractTestSuite) TestExtractVariadicArgMetadata() {
 		varadic("one", "two", "three")
 	}
 	`
-	
+
 	file := s.fset.AddFile("test.go", -1, len(code))
 	var lineOffsets []int
 	for i, ch := range code {
@@ -359,7 +357,7 @@ func (s *ExtractTestSuite) TestExtractVariadicArgMetadata() {
 		}
 	}
 	file.SetLines(lineOffsets)
-	
+
 	// Test with mock CallExpr
 	callExpr := &ast.CallExpr{
 		Fun: &ast.SelectorExpr{
@@ -372,12 +370,12 @@ func (s *ExtractTestSuite) TestExtractVariadicArgMetadata() {
 			&ast.BasicLit{Kind: token.STRING, Value: `"c"`, ValuePos: token.Pos(120)},
 		},
 	}
-	
+
 	result := extractVariadicArgMetadata(s.pass, callExpr, false)
-	assert.Len(s.T(), result, 0) // no variadic info in types
-	
+	s.Assert().Len(result, 0) // no variadic info in types
+
 	result = extractVariadicArgMetadata(s.pass, callExpr, true)
-	assert.Len(s.T(), result, 0) // no variadic info in types
+	s.Assert().Len(result, 0) // no variadic info in types
 }
 
 func (s *ExtractTestSuite) TestExtractVariadicArgs() {
@@ -390,11 +388,11 @@ func (s *ExtractTestSuite) TestExtractVariadicArgs() {
 			},
 		},
 	}
-	
+
 	args, ok := extractVariadicArgs(s.pass, ellipsisExpr)
-	assert.False(s.T(), ok)
-	assert.Nil(s.T(), args)
-	
+	s.Assert().False(ok)
+	s.Assert().Nil(args)
+
 	// Test with no variadic index
 	noVariadicExpr := &ast.CallExpr{
 		Fun: &ast.Ident{Name: "foo"},
@@ -402,10 +400,10 @@ func (s *ExtractTestSuite) TestExtractVariadicArgs() {
 			&ast.BasicLit{Kind: token.STRING, Value: `"test"`},
 		},
 	}
-	
+
 	args, ok = extractVariadicArgs(s.pass, noVariadicExpr)
-	assert.False(s.T(), ok)
-	assert.Nil(s.T(), args)
+	s.Assert().False(ok)
+	s.Assert().Nil(args)
 }
 
 func TestExtractTestSuite(t *testing.T) {
@@ -448,30 +446,30 @@ func testExtractFunc(pass *analysis.Pass, node testNode) (string, token.Pos, int
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_EmptyNodes() {
 	var nodes []testNode
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	assert.Empty(s.T(), result)
-	
+	s.Assert().Empty(result)
+
 	result = extractMetadata(s.pass, nodes, testExtractFunc, true)
-	assert.Empty(s.T(), result)
+	s.Assert().Empty(result)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_SingleNode() {
 	nodes := []testNode{
 		{value: "test1", line: 1},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 1)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	assert.Equal(s.T(), 1, result[0][0].Line)
-	assert.Equal(s.T(), token.Pos(1), result[0][0].Position)
-	
+	s.Assert().Len(result, 1)
+	s.Require().Len(result[0], 1)
+	s.Require().Equal("test1", result[0][0].Value)
+	s.Require().Equal(1, result[0][0].Line)
+	s.Require().Equal(token.Pos(1), result[0][0].Position)
+
 	result = extractMetadata(s.pass, nodes, testExtractFunc, true)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 1)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
+	s.Require().Len(result, 1)
+	s.Require().Len(result[0], 1)
+	s.Require().Equal("test1", result[0][0].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_IgnoreGroups() {
@@ -480,13 +478,13 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_IgnoreGroups() {
 		{value: "test2", line: 3},
 		{value: "test3", line: 5},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, true)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 3)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	assert.Equal(s.T(), "test2", result[0][1].Value)
-	assert.Equal(s.T(), "test3", result[0][2].Value)
+	s.Require().Len(result, 1)
+	s.Require().Len(result[0], 3)
+	s.Require().Equal("test1", result[0][0].Value)
+	s.Require().Equal("test2", result[0][1].Value)
+	s.Require().Equal("test3", result[0][2].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_GroupByEmptyLine() {
@@ -497,20 +495,20 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_GroupByEmptyLine() {
 		{value: "test4", line: 5},
 		{value: "test5", line: 7},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 3)
-	
-	require.Len(s.T(), result[0], 2)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	assert.Equal(s.T(), "test2", result[0][1].Value)
-	
-	require.Len(s.T(), result[1], 2)
-	assert.Equal(s.T(), "test3", result[1][0].Value)
-	assert.Equal(s.T(), "test4", result[1][1].Value)
-	
-	require.Len(s.T(), result[2], 1)
-	assert.Equal(s.T(), "test5", result[2][0].Value)
+	s.Require().Len(result, 3)
+
+	s.Require().Len(result[0], 2)
+	s.Assert().Equal("test1", result[0][0].Value)
+	s.Assert().Equal("test2", result[0][1].Value)
+
+	s.Require().Len(result[1], 2)
+	s.Assert().Equal("test3", result[1][0].Value)
+	s.Assert().Equal("test4", result[1][1].Value)
+
+	s.Require().Len(result[2], 1)
+	s.Assert().Equal("test5", result[2][0].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_ConsecutiveEmptyLines() {
@@ -519,18 +517,18 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_ConsecutiveEmptyLines() {
 		{value: "test2", line: 4},
 		{value: "test3", line: 7},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 3)
-	
-	assert.Len(s.T(), result[0], 1)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	
-	assert.Len(s.T(), result[1], 1)
-	assert.Equal(s.T(), "test2", result[1][0].Value)
-	
-	assert.Len(s.T(), result[2], 1)
-	assert.Equal(s.T(), "test3", result[2][0].Value)
+	s.Require().Len(result, 3)
+
+	s.Require().Len(result[0], 1)
+	s.Assert().Equal("test1", result[0][0].Value)
+
+	s.Require().Len(result[1], 1)
+	s.Assert().Equal("test2", result[1][0].Value)
+
+	s.Require().Len(result[2], 1)
+	s.Assert().Equal("test3", result[2][0].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_UnsortedNodes() {
@@ -540,23 +538,23 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_UnsortedNodes() {
 		{value: "test2", line: 2},
 		{value: "test4", line: 7},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 3)
-	
-	require.Len(s.T(), result[0], 2)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	assert.Equal(s.T(), 1, result[0][0].Line)
-	assert.Equal(s.T(), "test2", result[0][1].Value)
-	assert.Equal(s.T(), 2, result[0][1].Line)
-	
-	require.Len(s.T(), result[1], 1)
-	assert.Equal(s.T(), "test3", result[1][0].Value)
-	assert.Equal(s.T(), 5, result[1][0].Line)
-	
-	require.Len(s.T(), result[2], 1)
-	assert.Equal(s.T(), "test4", result[2][0].Value)
-	assert.Equal(s.T(), 7, result[2][0].Line)
+	s.Require().Len(result, 3)
+
+	s.Require().Len(result[0], 2)
+	s.Assert().Equal("test1", result[0][0].Value)
+	s.Assert().Equal(1, result[0][0].Line)
+	s.Assert().Equal("test2", result[0][1].Value)
+	s.Assert().Equal(2, result[0][1].Line)
+
+	s.Require().Len(result[1], 1)
+	s.Assert().Equal("test3", result[1][0].Value)
+	s.Assert().Equal(5, result[1][0].Line)
+
+	s.Require().Len(result[2], 1)
+	s.Assert().Equal("test4", result[2][0].Value)
+	s.Assert().Equal(7, result[2][0].Line)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_SingleLineGap() {
@@ -565,13 +563,13 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_SingleLineGap() {
 		{value: "test2", line: 2},
 		{value: "test3", line: 3},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 3)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	assert.Equal(s.T(), "test2", result[0][1].Value)
-	assert.Equal(s.T(), "test3", result[0][2].Value)
+	s.Require().Len(result, 1)
+	s.Require().Len(result[0], 3)
+	s.Assert().Equal("test1", result[0][0].Value)
+	s.Assert().Equal("test2", result[0][1].Value)
+	s.Assert().Equal("test3", result[0][2].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_NodePreservation() {
@@ -579,21 +577,21 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_NodePreservation() {
 		testNode
 		extra string
 	}
-	
+
 	customExtract := func(pass *analysis.Pass, node customNode) (string, token.Pos, int) {
 		return node.value, node.Pos(), node.line
 	}
-	
+
 	nodes := []customNode{
 		{testNode: testNode{value: "test1", line: 1}, extra: "extra1"},
 		{testNode: testNode{value: "test2", line: 3}, extra: "extra2"},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, customExtract, false)
-	require.Len(s.T(), result, 2)
-	
-	assert.Equal(s.T(), "extra1", result[0][0].Node.extra)
-	assert.Equal(s.T(), "extra2", result[1][0].Node.extra)
+	s.Require().Len(result, 2)
+
+	s.Assert().Equal("extra1", result[0][0].Node.extra)
+	s.Assert().Equal("extra2", result[1][0].Node.extra)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_TwoLineGap() {
@@ -601,15 +599,15 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_TwoLineGap() {
 		{value: "test1", line: 1},
 		{value: "test2", line: 4},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 2)
-	
-	assert.Len(s.T(), result[0], 1)
-	assert.Equal(s.T(), "test1", result[0][0].Value)
-	
-	assert.Len(s.T(), result[1], 1)
-	assert.Equal(s.T(), "test2", result[1][0].Value)
+	s.Require().Len(result, 2)
+
+	s.Assert().Len(result[0], 1)
+	s.Assert().Equal("test1", result[0][0].Value)
+
+	s.Assert().Len(result[1], 1)
+	s.Assert().Equal("test2", result[1][0].Value)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_MixedGapsWithIgnoreGroups() {
@@ -620,13 +618,13 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_MixedGapsWithIgnoreGroups
 		{value: "test4", line: 7},
 		{value: "test5", line: 8},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, true)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 5)
-	
+	s.Require().Len(result, 1)
+	s.Assert().Len(result[0], 5)
+
 	for i, expected := range []string{"test1", "test2", "test3", "test4", "test5"} {
-		assert.Equal(s.T(), expected, result[0][i].Value)
+		s.Assert().Equal(expected, result[0][i].Value)
 	}
 }
 
@@ -636,13 +634,13 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_LargeGaps() {
 		{value: "test2", line: 10},
 		{value: "test3", line: 20},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 3)
-	
+	s.Require().Len(result, 3)
+
 	for i, expected := range []string{"test1", "test2", "test3"} {
-		require.Len(s.T(), result[i], 1)
-		assert.Equal(s.T(), expected, result[i][0].Value)
+		s.Assert().Len(result[i], 1)
+		s.Assert().Equal(expected, result[i][0].Value)
 	}
 }
 
@@ -652,14 +650,14 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_AllSameLine() {
 		{value: "test2", line: 5},
 		{value: "test3", line: 5},
 	}
-	
+
 	result := extractMetadata(s.pass, nodes, testExtractFunc, false)
-	require.Len(s.T(), result, 1)
-	require.Len(s.T(), result[0], 3)
-	
+	s.Require().Len(result, 1)
+	s.Assert().Len(result[0], 3)
+
 	for i, expected := range []string{"test1", "test2", "test3"} {
-		assert.Equal(s.T(), expected, result[0][i].Value)
-		assert.Equal(s.T(), 5, result[0][i].Line)
+		s.Assert().Equal(expected, result[0][i].Value)
+		s.Assert().Equal(5, result[0][i].Line)
 	}
 }
 
