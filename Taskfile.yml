@@ -36,7 +36,9 @@ tasks:
   test:
     desc: "Run unit tests"
     cmds:
-      - go test ./... 
+      - go test ./... --coverprofile=coverage.out
+      - cat coverage.out | grep -vE "main.go|golangci-plugin.go|fixer.go|config.go:22" > coverage_filtered.out
+      - go tool cover -func=coverage_filtered.out
 
   # Build
   build:
