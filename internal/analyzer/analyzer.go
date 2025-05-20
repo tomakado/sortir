@@ -9,7 +9,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 
-	"go.tomakado.io/sortir/internal/analyzer/checker"
 	"go.tomakado.io/sortir/internal/config"
 	"go.tomakado.io/sortir/internal/log"
 )
@@ -19,7 +18,7 @@ type Analyzer struct {
 	initOnce sync.Once
 
 	analyzer *analysis.Analyzer
-	checker  *checker.Checker
+	checker  *Checker
 	logger   *log.Logger
 }
 
@@ -45,7 +44,7 @@ func (a *Analyzer) Analyzer() *analysis.Analyzer {
 	return a.analyzer
 }
 
-func (a *Analyzer) Checker() *checker.Checker {
+func (a *Analyzer) Checker() *Checker {
 	a.initState()
 	return a.checker
 }
@@ -82,7 +81,7 @@ func (a *Analyzer) run(pass *analysis.Pass) (any, error) {
 func (a *Analyzer) initState() {
 	a.initOnce.Do(func() {
 		a.logger = log.New(a.cfg.LogLevel())
-		a.checker = checker.New(a.cfg).WithLogger(a.logger)
+		a.checker = NewChecker(a.cfg).WithLogger(a.logger)
 	})
 }
 

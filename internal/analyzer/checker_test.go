@@ -1,4 +1,4 @@
-package checker
+package analyzer
 
 import (
 	"go/token"
@@ -28,7 +28,7 @@ func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata, prefix, globa
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, prefix, message)
 	s.Require().Equal(shouldPass, result)
@@ -53,7 +53,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
@@ -78,7 +78,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
@@ -108,7 +108,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
@@ -128,7 +128,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
@@ -151,7 +151,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
@@ -176,7 +176,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFiltering() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "prefix", "test message")
 	s.Require().True(result)
@@ -230,7 +230,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "prefix", "test message")
 	s.Require().True(result)
@@ -255,7 +255,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
@@ -280,7 +280,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllElementsFilteredOut() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
@@ -326,7 +326,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NilGroups() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, nil, "", "test message")
 	s.Require().True(result)
@@ -350,7 +350,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix(
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
@@ -376,7 +376,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_IdenticalValues() {
 		},
 	}
 
-	c := New(config.New())
+	c := NewChecker(config.New())
 
 	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)

@@ -1,5 +1,4 @@
-// Package checker implements the checking logic for sorting of Go code elements.
-package checker
+package analyzer
 
 import (
 	"fmt"
@@ -21,7 +20,7 @@ type Checker struct {
 	Config *config.SortConfig
 }
 
-func New(cfg *config.SortConfig) *Checker {
+func NewChecker(cfg *config.SortConfig) *Checker {
 	return &Checker{Config: cfg}
 }
 
