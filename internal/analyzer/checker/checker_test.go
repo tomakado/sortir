@@ -1,12 +1,11 @@
 package checker
 
 import (
-	"go/ast"
 	"go/token"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.tomakado.io/sortir/internal/log"
+	"go.tomakado.io/sortir/internal/config"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -19,7 +18,7 @@ type CheckerTestSuite struct {
 	suite.Suite
 }
 
-func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata[ast.Node], prefix, globalPrefix, message string, shouldPass bool) []analysis.Diagnostic {
+func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata, prefix, globalPrefix, message string, shouldPass bool) []analysis.Diagnostic {
 	s.T().Parallel()
 
 	reported := []analysis.Diagnostic{}
@@ -29,7 +28,9 @@ func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata[ast.Node], pre
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, prefix, globalPrefix, message, log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, prefix, message)
 	s.Require().Equal(shouldPass, result)
 	return reported
 }
@@ -37,7 +38,7 @@ func (s *CheckerTestSuite) testElementsSorted(groups [][]metadata[ast.Node], pre
 func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -52,7 +53,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -60,7 +63,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -75,7 +78,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(2), reported[0].Pos)
@@ -85,7 +90,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -103,7 +108,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(5), reported[0].Pos)
@@ -112,7 +119,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleGroups() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{{}}
+	groups := [][]metadata{{}}
 
 	reported := []analysis.Diagnostic{}
 	pass := &analysis.Pass{
@@ -121,7 +128,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -129,7 +138,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyGroups() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}}},
 		{{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}}},
 		{{Value: "b", Position: token.Pos(3), Line: 3, Node: &mockNode{}}},
@@ -142,7 +151,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -150,7 +161,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_SingleElementGroups() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFiltering() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "prefixA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "notPrefixed", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -165,13 +176,15 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFiltering() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "prefix", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "prefix", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
 
 func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFilteringNotSorted() {
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "prefixB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -186,7 +199,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_WithPrefixFilteringNotSorted(
 }
 
 func (s *CheckerTestSuite) TestCheckElementsSorted_WithGlobalPrefix() {
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "globalPrefixB", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "otherThing", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -202,7 +215,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_WithGlobalPrefix() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "localPrefixA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "globalPrefixZ", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -217,7 +230,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "localPrefix", "globalPrefix", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "prefix", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -225,7 +240,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_PrefixOverridesGlobal() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -240,7 +255,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -248,7 +265,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyStringValues() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_AllElementsFilteredOut() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "otherA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "otherB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -263,13 +280,15 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_AllElementsFilteredOut() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "prefix", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
 
 func (s *CheckerTestSuite) TestCheckElementsSorted_MixedPrefixedAndNonPrefixed() {
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "otherA", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "prefixB", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -284,7 +303,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_MixedPrefixedAndNonPrefixed()
 }
 
 func (s *CheckerTestSuite) TestCheckElementsSorted_MultipleSortingIssuesReportsFirst() {
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -307,7 +326,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NilGroups() {
 		},
 	}
 
-	result := checkElementsSorted[ast.Node](pass, nil, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, nil, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
@@ -315,7 +336,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_NilGroups() {
 func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -329,7 +350,9 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix(
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().False(result)
 	s.Require().Len(reported, 1)
 	s.Require().Equal(token.Pos(2), reported[0].Pos)
@@ -338,7 +361,7 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_EmptyPrefixEmptyGlobalPrefix(
 func (s *CheckerTestSuite) TestCheckElementsSorted_IdenticalValues() {
 	s.T().Parallel()
 
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
@@ -353,13 +376,15 @@ func (s *CheckerTestSuite) TestCheckElementsSorted_IdenticalValues() {
 		},
 	}
 
-	result := checkElementsSorted(pass, groups, "", "", "test message", log.New(log.Important))
+	c := New(config.New())
+
+	result := c.checkElementsSorted(pass, groups, "", "test message")
 	s.Require().True(result)
 	s.Require().Empty(reported)
 }
 
 func (s *CheckerTestSuite) TestCheckElementsSorted_BreakAfterFirstReport() {
-	groups := [][]metadata[ast.Node]{
+	groups := [][]metadata{
 		{
 			{Value: "c", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
 			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},

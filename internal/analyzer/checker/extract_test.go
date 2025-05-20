@@ -590,8 +590,8 @@ func (s *ExtractMetadataTestSuite) TestExtractMetadata_NodePreservation() {
 	result := extractMetadata(s.pass, nodes, customExtract, false)
 	s.Require().Len(result, 2)
 
-	s.Assert().Equal("extra1", result[0][0].Node.extra)
-	s.Assert().Equal("extra2", result[1][0].Node.extra)
+	s.Assert().Equal("extra1", result[0][0].Node.(customNode).extra)
+	s.Assert().Equal("extra2", result[1][0].Node.(customNode).extra)
 }
 
 func (s *ExtractMetadataTestSuite) TestExtractMetadata_TwoLineGap() {

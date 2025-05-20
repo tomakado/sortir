@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"iter"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -14,7 +15,8 @@ import (
 )
 
 type Checker struct {
-	logger *log.Logger
+	logger      *log.Logger
+	diagnostics []Diagnostic
 
 	Config *config.SortConfig
 }
@@ -27,6 +29,16 @@ func (c *Checker) WithLogger(logger *log.Logger) *Checker {
 	return &Checker{
 		logger: logger,
 		Config: c.Config,
+	}
+}
+
+func (c *Checker) Diagnostics() iter.Seq[Diagnostic] {
+	return func(yield func(Diagnostic) bool) {
+		for _, d := range c.diagnostics {
+			if !yield(d) {
+				return
+			}
+		}
 	}
 }
 
@@ -79,13 +91,11 @@ func (c *Checker) checkGenDecl(pass *analysis.Pass, node *ast.GenDecl) bool {
 	c.logger.Verbose("Extracting metadata", log.FieldSpecsCount, len(valueSpecs), log.FieldIgnoreGroups, c.Config.IgnoreGroups)
 	metadata := extractMetadata(pass, valueSpecs, extractGenDecl, c.Config.IgnoreGroups)
 	c.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
-	return checkElementsSorted(
+	return c.checkElementsSorted(
 		pass,
 		metadata,
 		prefix,
-		c.Config.GlobalPrefix,
 		"variable/constant declarations are not sorted",
-		c.logger,
 	)
 }
 
@@ -99,13 +109,11 @@ func (c *Checker) checkStructType(pass *analysis.Pass, node *ast.StructType) boo
 	c.logger.Verbose("Extracting metadata", log.FieldFieldsCount, len(node.Fields.List), log.FieldIgnoreGroups, c.Config.IgnoreGroups)
 	metadata := extractMetadata(pass, node.Fields.List, extractStructField, c.Config.IgnoreGroups)
 	c.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, c.Config.StructFields.Prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
-	return checkElementsSorted(
+	return c.checkElementsSorted(
 		pass,
 		metadata,
 		c.Config.StructFields.Prefix,
-		c.Config.GlobalPrefix,
 		"struct fields are not sorted",
-		c.logger,
 	)
 }
 
@@ -119,13 +127,11 @@ func (c *Checker) checkInterfaceType(pass *analysis.Pass, node *ast.InterfaceTyp
 	c.logger.Verbose("Extracting metadata", log.FieldMethodsCount, len(node.Methods.List), log.FieldIgnoreGroups, c.Config.IgnoreGroups)
 	metadata := extractMetadata(pass, node.Methods.List, extractInterfaceMethod, c.Config.IgnoreGroups)
 	c.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, c.Config.InterfaceMethods.Prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
-	return checkElementsSorted(
+	return c.checkElementsSorted(
 		pass,
 		metadata,
 		c.Config.InterfaceMethods.Prefix,
-		c.Config.GlobalPrefix,
 		"interface methods are not sorted",
-		c.logger,
 	)
 }
 
@@ -139,13 +145,11 @@ func (c *Checker) checkCallExpr(pass *analysis.Pass, node *ast.CallExpr) bool {
 	c.logger.Verbose("Extracting metadata", log.FieldArgsCount, len(node.Args), log.FieldIgnoreGroups, c.Config.IgnoreGroups)
 	metadata := extractVariadicArgMetadata(pass, node, c.Config.IgnoreGroups)
 	c.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, c.Config.VariadicArgs.Prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
-	return checkElementsSorted(
+	return c.checkElementsSorted(
 		pass,
 		metadata,
 		c.Config.VariadicArgs.Prefix,
-		c.Config.GlobalPrefix,
 		"variadic arguments are not sorted",
-		c.logger,
 	)
 }
 
@@ -166,48 +170,55 @@ func (c *Checker) checkCompositeLit(pass *analysis.Pass, node *ast.CompositeLit)
 	c.logger.Verbose("Extracting metadata", log.FieldKeyValueCount, len(keyValueExprs), log.FieldIgnoreGroups, c.Config.IgnoreGroups)
 	metadata := extractMetadata(pass, keyValueExprs, extractMapKey, c.Config.IgnoreGroups)
 	c.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, c.Config.MapKeys.Prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
-	return checkElementsSorted(
+	return c.checkElementsSorted(
 		pass,
 		metadata,
 		c.Config.MapKeys.Prefix,
-		c.Config.GlobalPrefix,
 		"composite literal elements are not sorted",
-		c.logger,
 	)
 }
 
-func checkElementsSorted[T ast.Node](
+func (c *Checker) report(pass *analysis.Pass, diagnostic Diagnostic) {
+	c.logger.Verbose("Reporting diagnostic", log.FieldDiagnostic, diagnostic)
+	c.diagnostics = append(c.diagnostics, diagnostic)
+
+	pass.Report(diagnostic.AsGoAnalysisDiagnostic())
+}
+
+func (c *Checker) checkElementsSorted(
 	pass *analysis.Pass,
-	groups [][]metadata[T],
-	prefix, globalPrefix, msg string,
-	logger *log.Logger,
+	groups [][]metadata,
+	prefix, msg string,
 ) bool {
 
 	allSorted := true
-
 	for groupIdx, group := range groups {
 		if len(group) <= 1 {
-			logger.Verbose("Skipping group with less than 2 elements", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
+			c.logger.Verbose("Skipping group with less than 2 elements", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
 			continue
 		}
 
-		logger.Verbose("Checking group sorting", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
+		c.logger.Verbose("Checking group sorting", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
 		for i := 1; i < len(group); i++ {
-			if !hasPrefixOrGlobal(group[i].Value, prefix, globalPrefix) {
-				logger.Verbose("Skipping element - no matching prefix", log.FieldElement, group[i].Value, log.FieldPrefix, prefix, log.FieldGlobalPrefix, globalPrefix)
+			if !hasPrefixOrGlobal(group[i].Value, prefix, c.Config.GlobalPrefix) {
+				c.logger.Verbose("Skipping element - no matching prefix", log.FieldElement, group[i].Value, log.FieldPrefix, prefix, log.FieldGlobalPrefix, c.Config.GlobalPrefix)
 				continue
 			}
 
 			if group[i].Value < group[i-1].Value {
 				allSorted = false
 				if pass.Fset != nil {
-					logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, pass.Fset.Position(group[i].Position))
+					c.logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, pass.Fset.Position(group[i].Position))
 				} else {
-					logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, group[i].Position)
+					c.logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, group[i].Position)
 				}
 
-				pass.Report(analysis.Diagnostic{
-					Pos:     group[i].Position,
+				// pass.Report(analysis.Diagnostic{
+				// 	Pos:     group[i].Position,
+				// 	Message: msg,
+				// })
+				c.report(pass, Diagnostic{
+					From:    group[i].Position,
 					Message: msg,
 				})
 				break
@@ -215,7 +226,7 @@ func checkElementsSorted[T ast.Node](
 		}
 	}
 
-	logger.Verbose("Sorting check complete", log.FieldAllSorted, allSorted)
+	c.logger.Verbose("Sorting check complete", log.FieldDiagnosticsCount, len(c.diagnostics), log.FieldAllSorted, allSorted)
 	return allSorted
 }
 

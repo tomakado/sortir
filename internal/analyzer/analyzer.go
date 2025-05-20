@@ -89,27 +89,104 @@ func (a *Analyzer) initState() {
 func initCfg(analyzer *analysis.Analyzer) *config.SortConfig {
 	cfg := config.New()
 
-	analyzer.Flags.StringVar(&cfg.GlobalPrefix, config.FlagFilterPrefix, "", "only check sorting for symbols starting with specified prefix (global)")
-	analyzer.Flags.BoolVar(&cfg.IgnoreGroups, config.FlagIgnoreGroups, false, "ignore sorting checks for specific groups")
-	analyzer.Flags.BoolVar(&cfg.Verbose, config.FlagVerbose, false, "enable verbose logging")
+	analyzer.Flags.StringVar(
+		&cfg.GlobalPrefix,
+		config.FlagFilterPrefix,
+		config.Default[string](config.FlagFilterPrefix),
+		"only check sorting for symbols starting with specified prefix (global)",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.Constants.Enabled, config.FlagConstants, true, "enable constant sorting checks")
-	analyzer.Flags.StringVar(&cfg.Constants.Prefix, config.FlagConstantsPrefix, "", "only check sorting for constants starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.IgnoreGroups,
+		config.FlagIgnoreGroups,
+		config.Default[bool](config.FlagIgnoreGroups),
+		"ignore sorting checks for specific groups",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.Variables.Enabled, config.FlagVariables, true, "enable variable sorting checks")
-	analyzer.Flags.StringVar(&cfg.Variables.Prefix, config.FlagVariablesPrefix, "", "only check sorting for variables starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.Verbose,
+		config.FlagVerbose,
+		config.Default[bool](config.FlagVerbose),
+		"enable verbose logging",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.StructFields.Enabled, config.FlagStructFields, true, "enable struct field sorting checks")
-	analyzer.Flags.StringVar(&cfg.StructFields.Prefix, config.FlagStructFieldsPrefix, "", "only check sorting for struct fields starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.Constants.Enabled,
+		config.FlagConstants,
+		config.Default[bool](config.FlagConstants),
+		"enable constant sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.Constants.Prefix,
+		config.FlagConstantsPrefix,
+		config.Default[string](config.FlagConstantsPrefix),
+		"only check sorting for constants starting with specified prefix",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.InterfaceMethods.Enabled, config.FlagInterfaceMethods, true, "enable interface method sorting checks")
-	analyzer.Flags.StringVar(&cfg.InterfaceMethods.Prefix, config.FlagInterfaceMethodsPrefix, "", "only check sorting for interface methods starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.Variables.Enabled,
+		config.FlagVariables,
+		config.Default[bool](config.FlagVariables),
+		"enable variable sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.Variables.Prefix,
+		config.FlagVariablesPrefix,
+		config.Default[string](config.FlagVariablesPrefix),
+		"only check sorting for variables starting with specified prefix",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.VariadicArgs.Enabled, config.FlagVariadicArgs, false, "enable variadic argument sorting checks")
-	analyzer.Flags.StringVar(&cfg.VariadicArgs.Prefix, config.FlagVariadicArgsPrefix, "", "only check sorting for variadic arguments starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.StructFields.Enabled,
+		config.FlagStructFields,
+		config.Default[bool](config.FlagStructFields),
+		"enable struct field sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.StructFields.Prefix,
+		config.FlagStructFieldsPrefix,
+		config.Default[string](config.FlagStructFieldsPrefix),
+		"only check sorting for struct fields starting with specified prefix",
+	)
 
-	analyzer.Flags.BoolVar(&cfg.MapKeys.Enabled, config.FlagMapKeys, true, "enable map value sorting checks")
-	analyzer.Flags.StringVar(&cfg.MapKeys.Prefix, config.FlagMapKeysPrefix, "", "only check sorting for map values starting with specified prefix")
+	analyzer.Flags.BoolVar(
+		&cfg.InterfaceMethods.Enabled,
+		config.FlagInterfaceMethods,
+		config.Default[bool](config.FlagInterfaceMethods),
+		"enable interface method sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.InterfaceMethods.Prefix,
+		config.FlagInterfaceMethodsPrefix,
+		config.Default[string](config.FlagInterfaceMethodsPrefix),
+		"only check sorting for interface methods starting with specified prefix",
+	)
+
+	analyzer.Flags.BoolVar(
+		&cfg.VariadicArgs.Enabled,
+		config.FlagVariadicArgs,
+		config.Default[bool](config.FlagVariadicArgs),
+		"enable variadic argument sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.VariadicArgs.Prefix,
+		config.FlagVariadicArgsPrefix,
+		config.Default[string](config.FlagVariadicArgsPrefix),
+		"only check sorting for variadic arguments starting with specified prefix",
+	)
+
+	analyzer.Flags.BoolVar(
+		&cfg.MapKeys.Enabled,
+		config.FlagMapKeys,
+		config.Default[bool](config.FlagMapKeys),
+		"enable map value sorting checks",
+	)
+	analyzer.Flags.StringVar(
+		&cfg.MapKeys.Prefix,
+		config.FlagMapKeysPrefix,
+		config.Default[string](config.FlagMapKeysPrefix),
+		"only check sorting for map values starting with specified prefix",
+	)
 
 	return cfg
 }

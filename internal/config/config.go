@@ -23,34 +23,34 @@ type SortConfig struct {
 
 func New() *SortConfig {
 	return &SortConfig{
-		GlobalPrefix:   "",
-		IgnoreGroups:   false,
-		FixModeEnabled: false,
-		Verbose:        false,
+		GlobalPrefix:   Default[string](FlagFilterPrefix),
+		IgnoreGroups:   Default[bool](FlagIgnoreGroups),
+		FixModeEnabled: Default[bool](FlagFix),
+		Verbose:        Default[bool](FlagVerbose),
 
 		Constants: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagConstants),
+			Prefix:  Default[string](FlagConstantsPrefix),
 		},
 		Variables: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagVariables),
+			Prefix:  Default[string](FlagVariablesPrefix),
 		},
 		StructFields: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagStructFields),
+			Prefix:  Default[string](FlagStructFieldsPrefix),
 		},
 		InterfaceMethods: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagInterfaceMethods),
+			Prefix:  Default[string](FlagInterfaceMethodsPrefix),
 		},
 		VariadicArgs: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagVariadicArgs),
+			Prefix:  Default[string](FlagVariadicArgsPrefix),
 		},
 		MapKeys: &CheckConfig{
-			Enabled: false,
-			Prefix:  "",
+			Enabled: Default[bool](FlagMapKeys),
+			Prefix:  Default[string](FlagMapKeysPrefix),
 		},
 	}
 }
