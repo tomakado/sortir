@@ -233,6 +233,90 @@ func (s *AnalyzerMethodsTestSuite) getDiagnostics(pass *analysis.Pass) []analysi
 	return nil
 }
 
+type testParams struct {
+	cfg          *config.SortConfig
+	src          string
+	errorMessage string
+}
+
+func (s *AnalyzerMethodsTestSuite) testStructTypeSorting(params testParams, shouldPass bool) {
+	s.analyzer = analyzer.New()
+	s.analyzer = s.analyzer.WithConfig(params.cfg)
+	pass := s.createPass(params.src)
+
+	var structType *ast.StructType
+	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+		if st, ok := n.(*ast.StructType); ok {
+			structType = st
+			return false
+		}
+		return true
+	})
+
+	result := s.analyzer.CheckStructType(pass, structType)
+	s.Equal(shouldPass, result)
+
+	diagnostics := s.getDiagnostics(pass)
+	if shouldPass {
+		s.Empty(diagnostics)
+	} else {
+		s.Len(diagnostics, 1)
+		s.Contains(diagnostics[0].Message, params.errorMessage)
+	}
+}
+
+func (s *AnalyzerMethodsTestSuite) testInterfaceTypeSorting(params testParams, shouldPass bool) {
+	s.analyzer = analyzer.New()
+	s.analyzer = s.analyzer.WithConfig(params.cfg)
+	pass := s.createPass(params.src)
+
+	var interfaceType *ast.InterfaceType
+	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+		if it, ok := n.(*ast.InterfaceType); ok {
+			interfaceType = it
+			return false
+		}
+		return true
+	})
+
+	result := s.analyzer.CheckInterfaceType(pass, interfaceType)
+	s.Equal(shouldPass, result)
+
+	diagnostics := s.getDiagnostics(pass)
+	if shouldPass {
+		s.Empty(diagnostics)
+	} else {
+		s.Len(diagnostics, 1)
+		s.Contains(diagnostics[0].Message, params.errorMessage)
+	}
+}
+
+func (s *AnalyzerMethodsTestSuite) testCompositeLitSorting(params testParams, shouldPass bool) {
+	s.analyzer = analyzer.New()
+	s.analyzer = s.analyzer.WithConfig(params.cfg)
+	pass := s.createPass(params.src)
+
+	var compositeLit *ast.CompositeLit
+	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+		if cl, ok := n.(*ast.CompositeLit); ok {
+			compositeLit = cl
+			return false
+		}
+		return true
+	})
+
+	result := s.analyzer.CheckCompositeLit(pass, compositeLit)
+	s.Equal(shouldPass, result)
+
+	diagnostics := s.getDiagnostics(pass)
+	if shouldPass {
+		s.Empty(diagnostics)
+	} else {
+		s.Len(diagnostics, 1)
+		s.Contains(diagnostics[0].Message, params.errorMessage)
+	}
+}
+
 func (s *AnalyzerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, src string, expectedToken token.Token, shouldPass bool, expectedError string) {
 	s.analyzer = analyzer.New()
 	s.analyzer = s.analyzer.WithConfig(cfg)
@@ -376,42 +460,25 @@ var (
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckStructType_Enabled() {
-	cfg := &config.SortConfig{
-		StructFields: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "f",
+	s.testStructTypeSorting(testParams{
+		cfg: &config.SortConfig{
+			StructFields: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "f",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
 		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
+		src: `
 package test
 
 type MyStruct struct {
 	fB int
 	fA string
 }
-`
-	pass := s.createPass(src)
-
-	var structType *ast.StructType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if st, ok := n.(*ast.StructType); ok {
-			structType = st
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckStructType(pass, structType)
-	s.False(result)
-
-	diagnostics := s.getDiagnostics(pass)
-	s.Len(diagnostics, 1)
-	s.Contains(diagnostics[0].Message, "struct fields are not sorted")
+`,
+		errorMessage: "struct fields are not sorted",
+	}, false)
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckStructType_Disabled() {
@@ -485,42 +552,25 @@ type MyStruct struct {
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckInterfaceType_Enabled() {
-	cfg := &config.SortConfig{
-		InterfaceMethods: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "M",
+	s.testInterfaceTypeSorting(testParams{
+		cfg: &config.SortConfig{
+			InterfaceMethods: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "M",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
 		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
+		src: `
 package test
 
 type MyInterface interface {
 	MB() int
 	MA() string
 }
-`
-	pass := s.createPass(src)
-
-	var interfaceType *ast.InterfaceType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if it, ok := n.(*ast.InterfaceType); ok {
-			interfaceType = it
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckInterfaceType(pass, interfaceType)
-	s.False(result)
-
-	diagnostics := s.getDiagnostics(pass)
-	s.Len(diagnostics, 1)
-	s.Contains(diagnostics[0].Message, "interface methods are not sorted")
+`,
+		errorMessage: "interface methods are not sorted",
+	}, false)
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckInterfaceType_Disabled() {
@@ -637,42 +687,25 @@ func test() {
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckCompositeLit_Enabled() {
-	cfg := &config.SortConfig{
-		MapKeys: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "",
+	s.testCompositeLitSorting(testParams{
+		cfg: &config.SortConfig{
+			MapKeys: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
 		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
+		src: `
 package test
 
 var m = map[string]int{
 	"b": 2,
 	"a": 1,
 }
-`
-	pass := s.createPass(src)
-
-	var compositeLit *ast.CompositeLit
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if cl, ok := n.(*ast.CompositeLit); ok {
-			compositeLit = cl
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckCompositeLit(pass, compositeLit)
-	s.False(result)
-
-	diagnostics := s.getDiagnostics(pass)
-	s.Len(diagnostics, 1)
-	s.Contains(diagnostics[0].Message, "composite literal elements are not sorted")
+`,
+		errorMessage: "composite literal elements are not sorted",
+	}, false)
 }
 
 func (s *AnalyzerMethodsTestSuite) TestCheckCompositeLit_Disabled() {

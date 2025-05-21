@@ -270,40 +270,59 @@ func (a *Analyzer) checkGenDecl(pass *analysis.Pass, node *ast.GenDecl) bool {
 	)
 }
 
-func (a *Analyzer) checkStructType(pass *analysis.Pass, node *ast.StructType) bool {
-	a.logger.Verbose("Processing struct fields", log.FieldEnabled, a.cfg.StructFields.Enabled, log.FieldPrefix, a.cfg.StructFields.Prefix)
-	if !a.cfg.StructFields.Enabled {
-		a.logger.Verbose("Skipping struct field checks")
+type checkParams struct {
+	enabled        bool
+	prefix         string
+	itemName       string
+	skipMessage    string
+	errorMessage   string
+	countField     string
+	extractFunc    func(*analysis.Pass, *ast.Field) (string, token.Pos, int)
+	fieldList      []*ast.Field
+}
+
+func (a *Analyzer) checkFieldList(pass *analysis.Pass, params checkParams) bool {
+	a.logger.Verbose("Processing "+params.itemName, log.FieldEnabled, params.enabled, log.FieldPrefix, params.prefix)
+	if !params.enabled {
+		a.logger.Verbose("Skipping " + params.skipMessage)
 		return true
 	}
 
-	a.logger.Verbose("Extracting metadata", log.FieldFieldsCount, len(node.Fields.List), log.FieldIgnoreGroups, a.cfg.IgnoreGroups)
-	metadata := extractMetadata(pass, node.Fields.List, extractStructField, a.cfg.IgnoreGroups)
-	a.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, a.cfg.StructFields.Prefix, log.FieldGlobalPrefix, a.cfg.GlobalPrefix)
+	a.logger.Verbose("Extracting metadata", params.countField, len(params.fieldList), log.FieldIgnoreGroups, a.cfg.IgnoreGroups)
+	metadata := extractMetadata(pass, params.fieldList, params.extractFunc, a.cfg.IgnoreGroups)
+	a.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, params.prefix, log.FieldGlobalPrefix, a.cfg.GlobalPrefix)
 	return a.checkElementsSorted(
 		pass,
 		metadata,
-		a.cfg.StructFields.Prefix,
-		"struct fields are not sorted",
+		params.prefix,
+		params.errorMessage,
 	)
 }
 
-func (a *Analyzer) checkInterfaceType(pass *analysis.Pass, node *ast.InterfaceType) bool {
-	a.logger.Verbose("Processing interface methods", log.FieldEnabled, a.cfg.InterfaceMethods.Enabled, log.FieldPrefix, a.cfg.InterfaceMethods.Prefix)
-	if !a.cfg.InterfaceMethods.Enabled {
-		a.logger.Verbose("Skipping interface method checks")
-		return true
-	}
+func (a *Analyzer) checkStructType(pass *analysis.Pass, node *ast.StructType) bool {
+	return a.checkFieldList(pass, checkParams{
+		enabled:      a.cfg.StructFields.Enabled,
+		prefix:       a.cfg.StructFields.Prefix,
+		itemName:     "struct fields",
+		skipMessage:  "struct field checks",
+		errorMessage: "struct fields are not sorted",
+		countField:   log.FieldFieldsCount,
+		extractFunc:  extractStructField,
+		fieldList:    node.Fields.List,
+	})
+}
 
-	a.logger.Verbose("Extracting metadata", log.FieldMethodsCount, len(node.Methods.List), log.FieldIgnoreGroups, a.cfg.IgnoreGroups)
-	metadata := extractMetadata(pass, node.Methods.List, extractInterfaceMethod, a.cfg.IgnoreGroups)
-	a.logger.Verbose("Checking elements sorted", log.FieldGroupsCount, len(metadata), log.FieldPrefix, a.cfg.InterfaceMethods.Prefix, log.FieldGlobalPrefix, a.cfg.GlobalPrefix)
-	return a.checkElementsSorted(
-		pass,
-		metadata,
-		a.cfg.InterfaceMethods.Prefix,
-		"interface methods are not sorted",
-	)
+func (a *Analyzer) checkInterfaceType(pass *analysis.Pass, node *ast.InterfaceType) bool {
+	return a.checkFieldList(pass, checkParams{
+		enabled:      a.cfg.InterfaceMethods.Enabled,
+		prefix:       a.cfg.InterfaceMethods.Prefix,
+		itemName:     "interface methods",
+		skipMessage:  "interface method checks",
+		errorMessage: "interface methods are not sorted",
+		countField:   log.FieldMethodsCount,
+		extractFunc:  extractInterfaceMethod,
+		fieldList:    node.Methods.List,
+	})
 }
 
 func (a *Analyzer) checkCallExpr(pass *analysis.Pass, node *ast.CallExpr) bool {
