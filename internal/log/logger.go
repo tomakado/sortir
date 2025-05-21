@@ -10,7 +10,7 @@ type Logger struct {
 	level  Level
 }
 
-func New(level Level) *Logger {
+func NewLogger(level Level) *Logger {
 	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level.toSlogLevel()})
 
 	return &Logger{

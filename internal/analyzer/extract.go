@@ -14,7 +14,7 @@ import (
 
 type extractFunc[T ast.Node] func(pass *analysis.Pass, node T) (string, token.Pos, int)
 
-type metadata struct {
+type Metadata struct {
 	Value    string
 	Position token.Pos
 	Line     int
@@ -25,11 +25,11 @@ func extractVariadicArgMetadata(
 	pass *analysis.Pass,
 	callExpr *ast.CallExpr,
 	groupByEmptyLine bool,
-) [][]metadata {
+) [][]Metadata {
 
 	variadicArgs, ok := extractVariadicArgs(pass, callExpr)
 	if !ok {
-		return [][]metadata{}
+		return [][]Metadata{}
 	}
 
 	return extractMetadata(pass, variadicArgs, extractVariadicArg, groupByEmptyLine)
@@ -90,15 +90,15 @@ func extractMetadata[T ast.Node](
 	nodes []T,
 	extract extractFunc[T],
 	ignoreGroups bool,
-) [][]metadata {
+) [][]Metadata {
 	if len(nodes) == 0 {
-		return [][]metadata{}
+		return [][]Metadata{}
 	}
 
-	var allData []metadata
+	var allData []Metadata
 	for _, node := range nodes {
 		value, pos, line := extract(pass, node)
-		allData = append(allData, metadata{
+		allData = append(allData, Metadata{
 			Value:    value,
 			Position: pos,
 			Line:     line,
@@ -108,19 +108,19 @@ func extractMetadata[T ast.Node](
 
 	// If not grouping by empty lines, return all elements in a single group
 	if ignoreGroups {
-		return [][]metadata{allData}
+		return [][]Metadata{allData}
 	}
 
 	sort.Slice(allData, func(i, j int) bool {
 		return allData[i].Line < allData[j].Line
 	})
 
-	var result [][]metadata
+	var result [][]Metadata
 	if len(allData) == 0 {
 		return result
 	}
 
-	currentGroup := []metadata{allData[0]}
+	currentGroup := []Metadata{allData[0]}
 
 	for i := 1; i < len(allData); i++ {
 		// Check if there's at least one empty line between elements
@@ -129,7 +129,7 @@ func extractMetadata[T ast.Node](
 		if lineDiff > 1 {
 			// Empty line detected
 			result = append(result, currentGroup)
-			currentGroup = []metadata{allData[i]}
+			currentGroup = []Metadata{allData[i]}
 		} else {
 			currentGroup = append(currentGroup, allData[i])
 		}
