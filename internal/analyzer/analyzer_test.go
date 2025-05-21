@@ -7,7 +7,7 @@ import (
 	"go/types"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/analysistest"
 
@@ -121,77 +121,12 @@ type mockNode struct{}
 func (m *mockNode) Pos() token.Pos { return token.NoPos }
 func (m *mockNode) End() token.Pos { return token.NoPos }
 
-type AnalyzerTestSuite struct {
-	suite.Suite
-}
-
-func (s *AnalyzerTestSuite) TestCheckElementsSorted_AllSortedSingleGroup() {
-	s.T().Parallel()
-
-	groups := [][]analyzer.Metadata{
-		{
-			{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
-			{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
-			{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
-		},
-	}
-
-	reported := []analysis.Diagnostic{}
-	pass := &analysis.Pass{
-		Report: func(d analysis.Diagnostic) {
-			reported = append(reported, d)
-		},
-	}
-
-	a := analyzer.New()
-
-	result := a.CheckElementsSorted(pass, groups, "", "test message")
-	s.Require().True(result)
-	s.Require().Empty(reported)
-}
-
-func (s *AnalyzerTestSuite) TestCheckElementsSorted_NotSortedSingleGroup() {
-	s.T().Parallel()
-
-	groups := [][]analyzer.Metadata{
-		{
-			{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
-			{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
-			{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
-		},
-	}
-
-	reported := []analysis.Diagnostic{}
-	pass := &analysis.Pass{
-		Report: func(d analysis.Diagnostic) {
-			reported = append(reported, d)
-		},
-	}
-
-	a := analyzer.New()
-
-	result := a.CheckElementsSorted(pass, groups, "", "test message")
-	s.Require().False(result)
-	s.Require().Len(reported, 1)
-	s.Require().Equal(token.Pos(2), reported[0].Pos)
-	s.Require().Equal("test message", reported[0].Message)
-}
-
-type AnalyzerMethodsTestSuite struct {
-	suite.Suite
-	fset     *token.FileSet
-	analyzer *analyzer.Analyzer
-}
-
-func (s *AnalyzerMethodsTestSuite) SetupTest() {
-	s.fset = token.NewFileSet()
-}
-
 var diagnosticsAnalyzer = &analysis.Analyzer{Name: "diagnostics"}
 
-func (s *AnalyzerMethodsTestSuite) createPass(src string) *analysis.Pass {
-	file, err := parser.ParseFile(s.fset, "test.go", src, parser.ParseComments)
-	s.Require().NoError(err)
+func createPass(t *testing.T, src string) *analysis.Pass {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	require.NoError(t, err)
 
 	var diagnostics []analysis.Diagnostic
 	conf := &types.Config{}
@@ -202,11 +137,11 @@ func (s *AnalyzerMethodsTestSuite) createPass(src string) *analysis.Pass {
 		Uses:  make(map[*ast.Ident]types.Object),
 	}
 
-	pkg, err := conf.Check("test", s.fset, []*ast.File{file}, info)
-	s.Require().NoError(err)
+	pkg, err := conf.Check("test", fset, []*ast.File{file}, info)
+	require.NoError(t, err)
 
 	pass := &analysis.Pass{
-		Fset:      s.fset,
+		Fset:      fset,
 		Files:     []*ast.File{file},
 		Pkg:       pkg,
 		TypesInfo: info,
@@ -226,7 +161,7 @@ func (s *AnalyzerMethodsTestSuite) createPass(src string) *analysis.Pass {
 	return pass
 }
 
-func (s *AnalyzerMethodsTestSuite) getDiagnostics(pass *analysis.Pass) []analysis.Diagnostic {
+func getDiagnostics(pass *analysis.Pass) []analysis.Diagnostic {
 	if result, ok := pass.ResultOf[diagnosticsAnalyzer].(*[]analysis.Diagnostic); ok {
 		return *result
 	}
@@ -239,10 +174,9 @@ type testParams struct {
 	errorMessage string
 }
 
-func (s *AnalyzerMethodsTestSuite) testStructTypeSorting(params testParams, shouldPass bool) {
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(params.cfg)
-	pass := s.createPass(params.src)
+func testStructTypeSorting(t *testing.T, params testParams, shouldPass bool) {
+	a := analyzer.New().WithConfig(params.cfg)
+	pass := createPass(t, params.src)
 
 	var structType *ast.StructType
 	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
@@ -253,22 +187,21 @@ func (s *AnalyzerMethodsTestSuite) testStructTypeSorting(params testParams, shou
 		return true
 	})
 
-	result := s.analyzer.CheckStructType(pass, structType)
-	s.Equal(shouldPass, result)
+	result := a.CheckStructType(pass, structType)
+	require.Equal(t, shouldPass, result)
 
-	diagnostics := s.getDiagnostics(pass)
+	diagnostics := getDiagnostics(pass)
 	if shouldPass {
-		s.Empty(diagnostics)
+		require.Empty(t, diagnostics)
 	} else {
-		s.Len(diagnostics, 1)
-		s.Contains(diagnostics[0].Message, params.errorMessage)
+		require.Len(t, diagnostics, 1)
+		require.Contains(t, diagnostics[0].Message, params.errorMessage)
 	}
 }
 
-func (s *AnalyzerMethodsTestSuite) testInterfaceTypeSorting(params testParams, shouldPass bool) {
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(params.cfg)
-	pass := s.createPass(params.src)
+func testInterfaceTypeSorting(t *testing.T, params testParams, shouldPass bool) {
+	a := analyzer.New().WithConfig(params.cfg)
+	pass := createPass(t, params.src)
 
 	var interfaceType *ast.InterfaceType
 	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
@@ -279,22 +212,21 @@ func (s *AnalyzerMethodsTestSuite) testInterfaceTypeSorting(params testParams, s
 		return true
 	})
 
-	result := s.analyzer.CheckInterfaceType(pass, interfaceType)
-	s.Equal(shouldPass, result)
+	result := a.CheckInterfaceType(pass, interfaceType)
+	require.Equal(t, shouldPass, result)
 
-	diagnostics := s.getDiagnostics(pass)
+	diagnostics := getDiagnostics(pass)
 	if shouldPass {
-		s.Empty(diagnostics)
+		require.Empty(t, diagnostics)
 	} else {
-		s.Len(diagnostics, 1)
-		s.Contains(diagnostics[0].Message, params.errorMessage)
+		require.Len(t, diagnostics, 1)
+		require.Contains(t, diagnostics[0].Message, params.errorMessage)
 	}
 }
 
-func (s *AnalyzerMethodsTestSuite) testCompositeLitSorting(params testParams, shouldPass bool) {
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(params.cfg)
-	pass := s.createPass(params.src)
+func testCompositeLitSorting(t *testing.T, params testParams, shouldPass bool) {
+	a := analyzer.New().WithConfig(params.cfg)
+	pass := createPass(t, params.src)
 
 	var compositeLit *ast.CompositeLit
 	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
@@ -305,22 +237,21 @@ func (s *AnalyzerMethodsTestSuite) testCompositeLitSorting(params testParams, sh
 		return true
 	})
 
-	result := s.analyzer.CheckCompositeLit(pass, compositeLit)
-	s.Equal(shouldPass, result)
+	result := a.CheckCompositeLit(pass, compositeLit)
+	require.Equal(t, shouldPass, result)
 
-	diagnostics := s.getDiagnostics(pass)
+	diagnostics := getDiagnostics(pass)
 	if shouldPass {
-		s.Empty(diagnostics)
+		require.Empty(t, diagnostics)
 	} else {
-		s.Len(diagnostics, 1)
-		s.Contains(diagnostics[0].Message, params.errorMessage)
+		require.Len(t, diagnostics, 1)
+		require.Contains(t, diagnostics[0].Message, params.errorMessage)
 	}
 }
 
-func (s *AnalyzerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, src string, expectedToken token.Token, shouldPass bool, expectedError string) {
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-	pass := s.createPass(src)
+func testGenDeclSorting(t *testing.T, cfg *config.SortConfig, src string, expectedToken token.Token, shouldPass bool, expectedError string) {
+	a := analyzer.New().WithConfig(cfg)
+	pass := createPass(t, src)
 
 	var genDecl *ast.GenDecl
 	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
@@ -331,88 +262,148 @@ func (s *AnalyzerMethodsTestSuite) testGenDeclSorting(cfg *config.SortConfig, sr
 		return true
 	})
 
-	result := s.analyzer.CheckGenDecl(pass, genDecl)
-	s.Equal(shouldPass, result)
+	result := a.CheckGenDecl(pass, genDecl)
+	require.Equal(t, shouldPass, result)
 
-	diagnostics := s.getDiagnostics(pass)
+	diagnostics := getDiagnostics(pass)
 	if shouldPass {
-		s.Empty(diagnostics)
+		require.Empty(t, diagnostics)
 	} else {
-		s.Len(diagnostics, 1)
-		s.Contains(diagnostics[0].Message, expectedError)
+		require.Len(t, diagnostics, 1)
+		require.Contains(t, diagnostics[0].Message, expectedError)
 	}
 }
 
-func TestAnalyzerTestSuite(t *testing.T) {
-	suite.Run(t, new(AnalyzerTestSuite))
-}
+func TestCheckElementsSorted(t *testing.T) {
+	t.Parallel()
 
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_ConstantsEnabled() {
-	cfg := &config.SortConfig{
-		Constants: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "C",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
+	t.Run("all sorted single group", func(t *testing.T) {
+		t.Parallel()
 
-	src := `
-package test
-
-const (
-	CB = 1
-	CA = 2
-)
-`
-	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_ConstantsDisabled() {
-	cfg := &config.SortConfig{
-		Constants: &config.CheckConfig{
-			Enabled: false,
-		},
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-const (
-	CB = 1
-	CA = 2
-)
-`
-	pass := s.createPass(src)
-
-	var genDecl *ast.GenDecl
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if g, ok := n.(*ast.GenDecl); ok && g.Tok == token.CONST {
-			genDecl = g
-			return false
+		groups := [][]analyzer.Metadata{
+			{
+				{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+				{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+				{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+			},
 		}
-		return true
+
+		reported := []analysis.Diagnostic{}
+		pass := &analysis.Pass{
+			Report: func(d analysis.Diagnostic) {
+				reported = append(reported, d)
+			},
+		}
+
+		a := analyzer.New()
+
+		result := a.CheckElementsSorted(pass, groups, "", "test message")
+		require.True(t, result)
+		require.Empty(t, reported)
 	})
 
-	result := s.analyzer.CheckGenDecl(pass, genDecl)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
+	t.Run("not sorted single group", func(t *testing.T) {
+		t.Parallel()
+
+		groups := [][]analyzer.Metadata{
+			{
+				{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
+				{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
+				{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+			},
+		}
+
+		reported := []analysis.Diagnostic{}
+		pass := &analysis.Pass{
+			Report: func(d analysis.Diagnostic) {
+				reported = append(reported, d)
+			},
+		}
+
+		a := analyzer.New()
+
+		result := a.CheckElementsSorted(pass, groups, "", "test message")
+		require.False(t, result)
+		require.Len(t, reported, 1)
+		require.Equal(t, token.Pos(2), reported[0].Pos)
+		require.Equal(t, "test message", reported[0].Message)
+	})
 }
 
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_VariablesEnabled() {
-	cfg := &config.SortConfig{
-		Variables: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "v",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
+func TestCheckGenDecl(t *testing.T) {
+	t.Parallel()
 
-	src := `
+	t.Run("constants enabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			Constants: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "C",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+
+		src := `
+package test
+
+const (
+	CB = 1
+	CA = 2
+)
+`
+		testGenDeclSorting(t, cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
+	})
+
+	t.Run("constants disabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			Constants: &config.CheckConfig{
+				Enabled: false,
+			},
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+const (
+	CB = 1
+	CA = 2
+)
+`
+		pass := createPass(t, src)
+
+		var genDecl *ast.GenDecl
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if g, ok := n.(*ast.GenDecl); ok && g.Tok == token.CONST {
+				genDecl = g
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckGenDecl(pass, genDecl)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("variables enabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			Variables: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "v",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+
+		src := `
 package test
 
 var (
@@ -420,22 +411,23 @@ var (
 	vA = 2
 )
 `
-	s.testGenDeclSorting(cfg, src, token.VAR, false, "variable/constant declarations are not sorted")
-}
+		testGenDeclSorting(t, cfg, src, token.VAR, false, "variable/constant declarations are not sorted")
+	})
 
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_SortedVariables() {
-	cfg := &config.SortConfig{
-		Variables: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "v",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
+	t.Run("sorted variables", func(t *testing.T) {
+		t.Parallel()
 
-	src := `
+		cfg := &config.SortConfig{
+			Variables: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "v",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
 package test
 
 var (
@@ -443,316 +435,35 @@ var (
 	vB = 2
 )
 `
-	pass := s.createPass(src)
+		pass := createPass(t, src)
 
-	var genDecl *ast.GenDecl
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if g, ok := n.(*ast.GenDecl); ok && g.Tok == token.VAR {
-			genDecl = g
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckGenDecl(pass, genDecl)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckStructType_Enabled() {
-	s.testStructTypeSorting(testParams{
-		cfg: &config.SortConfig{
-			StructFields: &config.CheckConfig{
-				Enabled: true,
-				Prefix:  "f",
-			},
-			GlobalPrefix: "",
-			IgnoreGroups: false,
-		},
-		src: `
-package test
-
-type MyStruct struct {
-	fB int
-	fA string
-}
-`,
-		errorMessage: "struct fields are not sorted",
-	}, false)
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckStructType_Disabled() {
-	cfg := &config.SortConfig{
-		StructFields: &config.CheckConfig{
-			Enabled: false,
-		},
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-type MyStruct struct {
-	fB int
-	fA string
-}
-`
-	pass := s.createPass(src)
-
-	var structType *ast.StructType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if st, ok := n.(*ast.StructType); ok {
-			structType = st
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckStructType(pass, structType)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckStructType_Sorted() {
-	cfg := &config.SortConfig{
-		StructFields: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "f",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-type MyStruct struct {
-	fA string
-	fB int
-}
-`
-	pass := s.createPass(src)
-
-	var structType *ast.StructType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if st, ok := n.(*ast.StructType); ok {
-			structType = st
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckStructType(pass, structType)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckInterfaceType_Enabled() {
-	s.testInterfaceTypeSorting(testParams{
-		cfg: &config.SortConfig{
-			InterfaceMethods: &config.CheckConfig{
-				Enabled: true,
-				Prefix:  "M",
-			},
-			GlobalPrefix: "",
-			IgnoreGroups: false,
-		},
-		src: `
-package test
-
-type MyInterface interface {
-	MB() int
-	MA() string
-}
-`,
-		errorMessage: "interface methods are not sorted",
-	}, false)
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckInterfaceType_Disabled() {
-	cfg := &config.SortConfig{
-		InterfaceMethods: &config.CheckConfig{
-			Enabled: false,
-		},
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-type MyInterface interface {
-	MB() int
-	MA() string
-}
-`
-	pass := s.createPass(src)
-
-	var interfaceType *ast.InterfaceType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if it, ok := n.(*ast.InterfaceType); ok {
-			interfaceType = it
-			return false
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckInterfaceType(pass, interfaceType)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckCallExpr_Enabled() {
-	cfg := &config.SortConfig{
-		VariadicArgs: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-func myVariadicFunc(format string, args ...interface{}) {}
-
-func test() {
-	myVariadicFunc("test", "b", "a")
-}
-`
-	pass := s.createPass(src)
-
-	var callExpr *ast.CallExpr
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if ce, ok := n.(*ast.CallExpr); ok {
-			if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "myVariadicFunc" {
-				callExpr = ce
+		var genDecl *ast.GenDecl
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if g, ok := n.(*ast.GenDecl); ok && g.Tok == token.VAR {
+				genDecl = g
 				return false
 			}
-		}
-		return true
+			return true
+		})
+
+		result := a.CheckGenDecl(pass, genDecl)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
 	})
 
-	result := s.analyzer.CheckCallExpr(pass, callExpr)
-	s.False(result)
+	t.Run("global prefix", func(t *testing.T) {
+		t.Parallel()
 
-	diagnostics := s.getDiagnostics(pass)
-	s.Len(diagnostics, 1)
-	s.Contains(diagnostics[0].Message, "variadic arguments are not sorted")
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckCallExpr_Disabled() {
-	cfg := &config.SortConfig{
-		VariadicArgs: &config.CheckConfig{
-			Enabled: false,
-		},
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-func myVariadicFunc(format string, args ...interface{}) {}
-
-func test() {
-	myVariadicFunc("test", "b", "a")
-}
-`
-	pass := s.createPass(src)
-
-	var callExpr *ast.CallExpr
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if ce, ok := n.(*ast.CallExpr); ok {
-			if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "myVariadicFunc" {
-				callExpr = ce
-				return false
-			}
-		}
-		return true
-	})
-
-	result := s.analyzer.CheckCallExpr(pass, callExpr)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckCompositeLit_Enabled() {
-	s.testCompositeLitSorting(testParams{
-		cfg: &config.SortConfig{
-			MapKeys: &config.CheckConfig{
+		cfg := &config.SortConfig{
+			Constants: &config.CheckConfig{
 				Enabled: true,
 				Prefix:  "",
 			},
-			GlobalPrefix: "",
+			GlobalPrefix: "g",
 			IgnoreGroups: false,
-		},
-		src: `
-package test
-
-var m = map[string]int{
-	"b": 2,
-	"a": 1,
-}
-`,
-		errorMessage: "composite literal elements are not sorted",
-	}, false)
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckCompositeLit_Disabled() {
-	cfg := &config.SortConfig{
-		MapKeys: &config.CheckConfig{
-			Enabled: false,
-		},
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
-
-	src := `
-package test
-
-var m = map[string]int{
-	"b": 2,
-	"a": 1,
-}
-`
-	pass := s.createPass(src)
-
-	var compositeLit *ast.CompositeLit
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if cl, ok := n.(*ast.CompositeLit); ok {
-			compositeLit = cl
-			return false
 		}
-		return true
-	})
 
-	result := s.analyzer.CheckCompositeLit(pass, compositeLit)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
-}
-
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_GlobalPrefix() {
-	cfg := &config.SortConfig{
-		Constants: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "",
-		},
-		GlobalPrefix: "g",
-		IgnoreGroups: false,
-	}
-
-	src := `
+		src := `
 package test
 
 const (
@@ -761,20 +472,22 @@ const (
 	NotPrefixed = 3
 )
 `
-	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
-}
+		testGenDeclSorting(t, cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
+	})
 
-func (s *AnalyzerMethodsTestSuite) TestCheckGenDecl_IgnoreGroups() {
-	cfg := &config.SortConfig{
-		Constants: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "C",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: true,
-	}
+	t.Run("ignore groups", func(t *testing.T) {
+		t.Parallel()
 
-	src := `
+		cfg := &config.SortConfig{
+			Constants: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "C",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: true,
+		}
+
+		src := `
 package test
 
 const (
@@ -784,90 +497,341 @@ const (
 	CB = 2
 )
 `
-	s.testGenDeclSorting(cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
+		testGenDeclSorting(t, cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
+	})
 }
 
-func (s *AnalyzerMethodsTestSuite) TestCheckStructType_EmptyFieldList() {
-	cfg := &config.SortConfig{
-		StructFields: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "f",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
+func TestCheckStructType(t *testing.T) {
+	t.Parallel()
 
-	src := `
+	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testStructTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				StructFields: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "f",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: false,
+			},
+			src: `
+package test
+
+type MyStruct struct {
+	fB int
+	fA string
+}
+`,
+			errorMessage: "struct fields are not sorted",
+		}, false)
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			StructFields: &config.CheckConfig{
+				Enabled: false,
+			},
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+type MyStruct struct {
+	fB int
+	fA string
+}
+`
+		pass := createPass(t, src)
+
+		var structType *ast.StructType
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if st, ok := n.(*ast.StructType); ok {
+				structType = st
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckStructType(pass, structType)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("sorted", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			StructFields: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "f",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+type MyStruct struct {
+	fA string
+	fB int
+}
+`
+		pass := createPass(t, src)
+
+		var structType *ast.StructType
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if st, ok := n.(*ast.StructType); ok {
+				structType = st
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckStructType(pass, structType)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("empty field list", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			StructFields: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "f",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
 package test
 
 type MyStruct struct {
 }
 `
-	pass := s.createPass(src)
+		pass := createPass(t, src)
 
-	var structType *ast.StructType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if st, ok := n.(*ast.StructType); ok {
-			structType = st
-			return false
-		}
-		return true
+		var structType *ast.StructType
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if st, ok := n.(*ast.StructType); ok {
+				structType = st
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckStructType(pass, structType)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
 	})
-
-	result := s.analyzer.CheckStructType(pass, structType)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *AnalyzerMethodsTestSuite) TestCheckInterfaceType_EmptyMethodList() {
-	cfg := &config.SortConfig{
-		InterfaceMethods: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "M",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
+func TestCheckInterfaceType(t *testing.T) {
+	t.Parallel()
 
-	src := `
+	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testInterfaceTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				InterfaceMethods: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "M",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: false,
+			},
+			src: `
+package test
+
+type MyInterface interface {
+	MB() int
+	MA() string
+}
+`,
+			errorMessage: "interface methods are not sorted",
+		}, false)
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			InterfaceMethods: &config.CheckConfig{
+				Enabled: false,
+			},
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+type MyInterface interface {
+	MB() int
+	MA() string
+}
+`
+		pass := createPass(t, src)
+
+		var interfaceType *ast.InterfaceType
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if it, ok := n.(*ast.InterfaceType); ok {
+				interfaceType = it
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckInterfaceType(pass, interfaceType)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("empty method list", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			InterfaceMethods: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "M",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
 package test
 
 type MyInterface interface {
 }
 `
-	pass := s.createPass(src)
+		pass := createPass(t, src)
 
-	var interfaceType *ast.InterfaceType
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if it, ok := n.(*ast.InterfaceType); ok {
-			interfaceType = it
-			return false
-		}
-		return true
+		var interfaceType *ast.InterfaceType
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if it, ok := n.(*ast.InterfaceType); ok {
+				interfaceType = it
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckInterfaceType(pass, interfaceType)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
 	})
-
-	result := s.analyzer.CheckInterfaceType(pass, interfaceType)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
 }
 
-func (s *AnalyzerMethodsTestSuite) TestCheckCallExpr_NonVariadic() {
-	cfg := &config.SortConfig{
-		VariadicArgs: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
+func TestCheckCallExpr(t *testing.T) {
+	t.Parallel()
 
-	src := `
+	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			VariadicArgs: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+func myVariadicFunc(format string, args ...interface{}) {}
+
+func test() {
+	myVariadicFunc("test", "b", "a")
+}
+`
+		pass := createPass(t, src)
+
+		var callExpr *ast.CallExpr
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if ce, ok := n.(*ast.CallExpr); ok {
+				if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "myVariadicFunc" {
+					callExpr = ce
+					return false
+				}
+			}
+			return true
+		})
+
+		result := a.CheckCallExpr(pass, callExpr)
+		require.False(t, result)
+
+		diagnostics := getDiagnostics(pass)
+		require.Len(t, diagnostics, 1)
+		require.Contains(t, diagnostics[0].Message, "variadic arguments are not sorted")
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			VariadicArgs: &config.CheckConfig{
+				Enabled: false,
+			},
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+func myVariadicFunc(format string, args ...interface{}) {}
+
+func test() {
+	myVariadicFunc("test", "b", "a")
+}
+`
+		pass := createPass(t, src)
+
+		var callExpr *ast.CallExpr
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if ce, ok := n.(*ast.CallExpr); ok {
+				if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "myVariadicFunc" {
+					callExpr = ce
+					return false
+				}
+			}
+			return true
+		})
+
+		result := a.CheckCallExpr(pass, callExpr)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("non variadic", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			VariadicArgs: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
 package test
 
 func nonVariadic(a, b string) {}
@@ -876,37 +840,101 @@ func test() {
 	nonVariadic("b", "a")
 }
 `
-	pass := s.createPass(src)
+		pass := createPass(t, src)
 
-	var callExpr *ast.CallExpr
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if ce, ok := n.(*ast.CallExpr); ok {
-			if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "nonVariadic" {
-				callExpr = ce
-				return false
+		var callExpr *ast.CallExpr
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if ce, ok := n.(*ast.CallExpr); ok {
+				if ident, ok := ce.Fun.(*ast.Ident); ok && ident.Name == "nonVariadic" {
+					callExpr = ce
+					return false
+				}
 			}
-		}
-		return true
-	})
+			return true
+		})
 
-	result := s.analyzer.CheckCallExpr(pass, callExpr)
-	s.True(result)
-	s.Empty(s.getDiagnostics(pass))
+		result := a.CheckCallExpr(pass, callExpr)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
 }
 
-func (s *AnalyzerMethodsTestSuite) TestCheckCompositeLit_StructLiteral() {
-	cfg := &config.SortConfig{
-		MapKeys: &config.CheckConfig{
-			Enabled: true,
-			Prefix:  "",
-		},
-		GlobalPrefix: "",
-		IgnoreGroups: false,
-	}
-	s.analyzer = analyzer.New()
-	s.analyzer = s.analyzer.WithConfig(cfg)
+func TestCheckCompositeLit(t *testing.T) {
+	t.Parallel()
 
-	src := `
+	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testCompositeLitSorting(t, testParams{
+			cfg: &config.SortConfig{
+				MapKeys: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: false,
+			},
+			src: `
+package test
+
+var m = map[string]int{
+	"b": 2,
+	"a": 1,
+}
+`,
+			errorMessage: "composite literal elements are not sorted",
+		}, false)
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			MapKeys: &config.CheckConfig{
+				Enabled: false,
+			},
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
+package test
+
+var m = map[string]int{
+	"b": 2,
+	"a": 1,
+}
+`
+		pass := createPass(t, src)
+
+		var compositeLit *ast.CompositeLit
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if cl, ok := n.(*ast.CompositeLit); ok {
+				compositeLit = cl
+				return false
+			}
+			return true
+		})
+
+		result := a.CheckCompositeLit(pass, compositeLit)
+		require.True(t, result)
+		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("struct literal", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			MapKeys: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+		a := analyzer.New().WithConfig(cfg)
+
+		src := `
 package test
 
 type MyStruct struct {
@@ -919,22 +947,22 @@ var s = MyStruct{
 	A: 42,
 }
 `
-	pass := s.createPass(src)
+		pass := createPass(t, src)
 
-	var structLiteral *ast.CompositeLit
-	ast.Inspect(pass.Files[0], func(n ast.Node) bool {
-		if cl, ok := n.(*ast.CompositeLit); ok {
-			structLiteral = cl
-			return false
-		}
-		return true
-	})
+		var structLiteral *ast.CompositeLit
+		ast.Inspect(pass.Files[0], func(n ast.Node) bool {
+			if cl, ok := n.(*ast.CompositeLit); ok {
+				structLiteral = cl
+				return false
+			}
+			return true
+		})
 
-	result := s.analyzer.CheckCompositeLit(pass, structLiteral)
-	s.False(result, "struct field literals with unsorted keys should return false")
-	s.Len(s.getDiagnostics(pass), 1, "should have one diagnostic for unsorted struct fields")
+		result := a.CheckCompositeLit(pass, structLiteral)
+		require.False(t, result, "struct field literals with unsorted keys should return false")
+		require.Len(t, getDiagnostics(pass), 1, "should have one diagnostic for unsorted struct fields")
 
-	src2 := `
+		src2 := `
 package test
 
 var m = map[string]int{
@@ -942,22 +970,19 @@ var m = map[string]int{
 	"a": 1,
 }
 `
-	pass2 := s.createPass(src2)
+		pass2 := createPass(t, src2)
 
-	var mapLiteral *ast.CompositeLit
-	ast.Inspect(pass2.Files[0], func(n ast.Node) bool {
-		if cl, ok := n.(*ast.CompositeLit); ok {
-			mapLiteral = cl
-			return false
-		}
-		return true
+		var mapLiteral *ast.CompositeLit
+		ast.Inspect(pass2.Files[0], func(n ast.Node) bool {
+			if cl, ok := n.(*ast.CompositeLit); ok {
+				mapLiteral = cl
+				return false
+			}
+			return true
+		})
+
+		result = a.CheckCompositeLit(pass2, mapLiteral)
+		require.False(t, result, "map literal with unsorted keys should return false")
+		require.Len(t, getDiagnostics(pass2), 1, "should have one diagnostic for unsorted map keys")
 	})
-
-	result = s.analyzer.CheckCompositeLit(pass2, mapLiteral)
-	s.False(result, "map literal with unsorted keys should return false")
-	s.Len(s.getDiagnostics(pass2), 1, "should have one diagnostic for unsorted map keys")
-}
-
-func TestAnalyzerMethods(t *testing.T) {
-	suite.Run(t, new(AnalyzerMethodsTestSuite))
 }
