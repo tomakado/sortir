@@ -1,0 +1,11 @@
+package multiname
+
+var (
+	a, b, c string // want "variable/constant declarations are not sorted"
+	x, y, z int    // want "variable/constant declarations are not sorted"
+)
+
+const (
+	A, B, C = "c", "a", "b" // want "variable/constant declarations are not sorted"
+	X, Y, Z = 3, 1, 2       // want "variable/constant declarations are not sorted"
+)

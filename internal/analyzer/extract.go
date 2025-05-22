@@ -15,10 +15,10 @@ import (
 type extractFunc[T ast.Node] func(pass *analysis.Pass, node T) (string, token.Pos, int)
 
 type Metadata struct {
-	Value    string
-	Position token.Pos
 	Line     int
 	Node     ast.Node
+	Position token.Pos
+	Value    string
 }
 
 func extractVariadicArgMetadata(
@@ -99,10 +99,10 @@ func extractMetadata[T ast.Node](
 	for _, node := range nodes {
 		value, pos, line := extract(pass, node)
 		allData = append(allData, Metadata{
-			Value:    value,
-			Position: pos,
 			Line:     line,
 			Node:     node,
+			Position: pos,
+			Value:    value,
 		})
 	}
 

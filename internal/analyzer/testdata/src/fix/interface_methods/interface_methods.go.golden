@@ -1,0 +1,13 @@
+package interface_methods
+
+type UnsortedInterface interface {
+	AMethod()
+	BMethod()
+	ZMethod()
+}
+
+type AnotherInterface interface {
+	Close() error
+	Read([]byte) (int, error)
+	Write([]byte) (int, error)
+}

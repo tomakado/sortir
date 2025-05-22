@@ -25,16 +25,16 @@ type Analyzer struct {
 	cfg *config.SortConfig
 
 	analyzer    *analysis.Analyzer
-	logger      Logger
 	diagnostics []Diagnostic
+	logger      Logger
 }
 
 func New() *Analyzer {
 	analyzer := &analysis.Analyzer{
-		Name:             "sortir",
 		Doc:              "Checks and fixes sorting of Go code elements",
-		RunDespiteErrors: false,
+		Name:             "sortir",
 		Requires:         []*analysis.Analyzer{inspect.Analyzer},
+		RunDespiteErrors: false,
 		URL:              "go.tomakado.io/sortir",
 	}
 
@@ -271,14 +271,14 @@ func (a *Analyzer) checkGenDecl(pass *analysis.Pass, node *ast.GenDecl) bool {
 }
 
 type checkParams struct {
-	enabled        bool
-	prefix         string
-	itemName       string
-	skipMessage    string
-	errorMessage   string
-	countField     string
-	extractFunc    func(*analysis.Pass, *ast.Field) (string, token.Pos, int)
-	fieldList      []*ast.Field
+	countField   string
+	enabled      bool
+	errorMessage string
+	extractFunc  func(*analysis.Pass, *ast.Field) (string, token.Pos, int)
+	fieldList    []*ast.Field
+	itemName     string
+	prefix       string
+	skipMessage  string
 }
 
 func (a *Analyzer) checkFieldList(pass *analysis.Pass, params checkParams) bool {
@@ -301,27 +301,27 @@ func (a *Analyzer) checkFieldList(pass *analysis.Pass, params checkParams) bool 
 
 func (a *Analyzer) checkStructType(pass *analysis.Pass, node *ast.StructType) bool {
 	return a.checkFieldList(pass, checkParams{
-		enabled:      a.cfg.StructFields.Enabled,
-		prefix:       a.cfg.StructFields.Prefix,
-		itemName:     "struct fields",
-		skipMessage:  "struct field checks",
-		errorMessage: "struct fields are not sorted",
 		countField:   log.FieldFieldsCount,
+		enabled:      a.cfg.StructFields.Enabled,
+		errorMessage: "struct fields are not sorted",
 		extractFunc:  extractStructField,
 		fieldList:    node.Fields.List,
+		itemName:     "struct fields",
+		prefix:       a.cfg.StructFields.Prefix,
+		skipMessage:  "struct field checks",
 	})
 }
 
 func (a *Analyzer) checkInterfaceType(pass *analysis.Pass, node *ast.InterfaceType) bool {
 	return a.checkFieldList(pass, checkParams{
-		enabled:      a.cfg.InterfaceMethods.Enabled,
-		prefix:       a.cfg.InterfaceMethods.Prefix,
-		itemName:     "interface methods",
-		skipMessage:  "interface method checks",
-		errorMessage: "interface methods are not sorted",
 		countField:   log.FieldMethodsCount,
+		enabled:      a.cfg.InterfaceMethods.Enabled,
+		errorMessage: "interface methods are not sorted",
 		extractFunc:  extractInterfaceMethod,
 		fieldList:    node.Methods.List,
+		itemName:     "interface methods",
+		prefix:       a.cfg.InterfaceMethods.Prefix,
+		skipMessage:  "interface method checks",
 	})
 }
 
@@ -399,7 +399,7 @@ func (a *Analyzer) checkElementsSorted(
 		a.logger.Verbose("Checking group sorting", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
 		groupNeedsSorting := false
 		var unsortedIndex int
-		
+
 		for i := 1; i < len(group); i++ {
 			if !hasPrefixOrGlobal(group[i].Value, prefix, a.cfg.GlobalPrefix) {
 				a.logger.Verbose("Skipping element - no matching prefix", log.FieldElement, group[i].Value, log.FieldPrefix, prefix, log.FieldGlobalPrefix, a.cfg.GlobalPrefix)
@@ -418,11 +418,11 @@ func (a *Analyzer) checkElementsSorted(
 				break
 			}
 		}
-		
+
 		if groupNeedsSorting {
 			elementType := getElementType(msg)
 			fix := a.generateFix(pass, group, elementType)
-			
+
 			a.report(pass, Diagnostic{
 				From:       group[unsortedIndex].Position,
 				Message:    msg,

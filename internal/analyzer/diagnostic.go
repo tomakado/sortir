@@ -20,9 +20,7 @@ func (d Diagnostic) AsGoAnalysisDiagnostic() analysis.Diagnostic {
 				Message: d.Suggestion.Message,
 				TextEdits: []analysis.TextEdit{
 					{
-						Pos:     d.Suggestion.From,
-						End:     d.Suggestion.To,
-						NewText: []byte(d.Suggestion.Replacement),
+						End: d.Suggestion.To, NewText: []byte(d.Suggestion.Replacement), Pos: d.Suggestion.From,
 					},
 				},
 			},
@@ -30,10 +28,7 @@ func (d Diagnostic) AsGoAnalysisDiagnostic() analysis.Diagnostic {
 	}
 
 	return analysis.Diagnostic{
-		Pos:            d.From,
-		End:            d.To,
-		Message:        d.Message,
-		SuggestedFixes: suggestedFixes,
+		End: d.To, Message: d.Message, Pos: d.From, SuggestedFixes: suggestedFixes,
 	}
 }
 

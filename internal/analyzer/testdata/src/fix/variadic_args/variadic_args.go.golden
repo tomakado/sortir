@@ -1,0 +1,9 @@
+package variadic_args
+
+import "fmt"
+
+func main() {
+	fmt.Println("apple", "banana", "zebra") // want "variadic arguments are not sorted"
+	
+	fmt.Printf("%s %s %s\n", "a", "b", "z") // want "variadic arguments are not sorted"
+}

@@ -132,8 +132,8 @@ func createPass(t *testing.T, src string) *analysis.Pass {
 	conf := &types.Config{}
 
 	info := &types.Info{
-		Types: make(map[ast.Expr]types.TypeAndValue),
 		Defs:  make(map[*ast.Ident]types.Object),
+		Types: make(map[ast.Expr]types.TypeAndValue),
 		Uses:  make(map[*ast.Ident]types.Object),
 	}
 
@@ -141,14 +141,14 @@ func createPass(t *testing.T, src string) *analysis.Pass {
 	require.NoError(t, err)
 
 	pass := &analysis.Pass{
-		Fset:      fset,
-		Files:     []*ast.File{file},
-		Pkg:       pkg,
-		TypesInfo: info,
+		Files: []*ast.File{file},
+		Fset:  fset,
+		Pkg:   pkg,
 		Report: func(d analysis.Diagnostic) {
 			diagnostics = append(diagnostics, d)
 		},
-		ResultOf: make(map[*analysis.Analyzer]any),
+		ResultOf:  make(map[*analysis.Analyzer]any),
+		TypesInfo: info,
 	}
 
 	pass.Report = func(d analysis.Diagnostic) {
@@ -170,8 +170,8 @@ func getDiagnostics(pass *analysis.Pass) []analysis.Diagnostic {
 
 type testParams struct {
 	cfg          *config.SortConfig
-	src          string
 	errorMessage string
+	src          string
 }
 
 func testStructTypeSorting(t *testing.T, params testParams, shouldPass bool) {
@@ -282,9 +282,18 @@ func TestCheckElementsSorted(t *testing.T) {
 
 		groups := [][]analyzer.Metadata{
 			{
-				{Value: "a", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
-				{Value: "b", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
-				{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+				{Line: 1,
+					Node:     &mockNode{},
+					Position: token.Pos(1),
+					Value:    "a"},
+				{Line: 2,
+					Node:     &mockNode{},
+					Position: token.Pos(2),
+					Value:    "b"},
+				{Line: 3,
+					Node:     &mockNode{},
+					Position: token.Pos(3),
+					Value:    "c"},
 			},
 		}
 
@@ -307,9 +316,18 @@ func TestCheckElementsSorted(t *testing.T) {
 
 		groups := [][]analyzer.Metadata{
 			{
-				{Value: "b", Position: token.Pos(1), Line: 1, Node: &mockNode{}},
-				{Value: "a", Position: token.Pos(2), Line: 2, Node: &mockNode{}},
-				{Value: "c", Position: token.Pos(3), Line: 3, Node: &mockNode{}},
+				{Line: 1,
+					Node:     &mockNode{},
+					Position: token.Pos(1),
+					Value:    "b"},
+				{Line: 2,
+					Node:     &mockNode{},
+					Position: token.Pos(2),
+					Value:    "a"},
+				{Line: 3,
+					Node:     &mockNode{},
+					Position: token.Pos(3),
+					Value:    "c"},
 			},
 		}
 

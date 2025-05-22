@@ -1,0 +1,13 @@
+package struct_fields
+
+type UnsortedStruct struct {
+	Apple int
+	Banana bool `json:"banana"`
+	Zebra string
+}
+
+type AnotherStruct struct {
+	A int
+	B int
+	Z int
+}

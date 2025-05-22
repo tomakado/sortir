@@ -1,0 +1,13 @@
+package constants
+
+const (
+	A = 1 // want "variable/constant declarations are not sorted"
+	B = 2
+	C = 3
+)
+
+const (
+	X = "x" // want "variable/constant declarations are not sorted"
+	Y = "y"
+	Z = "z"
+)

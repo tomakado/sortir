@@ -1,0 +1,31 @@
+package empty_lines
+
+const (
+	Group1A = 1 // want "variable/constant declarations are not sorted"
+	Group1B = 2
+	Group1Z = 3
+
+	Group2A = "a" // want "variable/constant declarations are not sorted"
+	Group2B = "b"
+	Group2Z = "z"
+)
+
+var (
+	a1 = "a1" // want "variable/constant declarations are not sorted"
+	b1 = "b1"
+	z1 = "z1"
+
+	a2 = "a2" // want "variable/constant declarations are not sorted"
+	b2 = "b2"
+	z2 = "z2"
+)
+
+type MyStruct struct {
+	A1 int
+	B1 int
+	Z1 int
+
+	A2 string
+	B2 string
+	Z2 string
+}

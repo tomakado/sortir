@@ -1,0 +1,13 @@
+package formatting
+
+var (
+	apple  int // want "variable/constant declarations are not sorted"
+	banana int
+	zebra  int
+)
+
+type MyStruct struct {
+	Apple  int
+	Banana bool `json:"banana"`
+	Zebra  string
+}

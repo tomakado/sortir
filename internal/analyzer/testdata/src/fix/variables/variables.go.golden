@@ -1,0 +1,13 @@
+package variables
+
+var (
+	apple  = "a" // want "variable/constant declarations are not sorted"
+	banana = "b"
+	zebra  = "z"
+)
+
+var (
+	x int // want "variable/constant declarations are not sorted"
+	y int
+	z int
+)
