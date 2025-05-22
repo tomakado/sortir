@@ -397,6 +397,9 @@ func (a *Analyzer) checkElementsSorted(
 		}
 
 		a.logger.Verbose("Checking group sorting", log.FieldGroupIndex, groupIdx, log.FieldGroupSize, len(group))
+		groupNeedsSorting := false
+		var unsortedIndex int
+		
 		for i := 1; i < len(group); i++ {
 			if !hasPrefixOrGlobal(group[i].Value, prefix, a.cfg.GlobalPrefix) {
 				a.logger.Verbose("Skipping element - no matching prefix", log.FieldElement, group[i].Value, log.FieldPrefix, prefix, log.FieldGlobalPrefix, a.cfg.GlobalPrefix)
@@ -405,18 +408,26 @@ func (a *Analyzer) checkElementsSorted(
 
 			if group[i].Value < group[i-1].Value {
 				allSorted = false
+				groupNeedsSorting = true
+				unsortedIndex = i
 				if pass.Fset != nil {
 					a.logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, pass.Fset.Position(group[i].Position))
 				} else {
 					a.logger.Verbose("Found unsorted elements", log.FieldCurrent, group[i].Value, log.FieldPrevious, group[i-1].Value, log.FieldPosition, group[i].Position)
 				}
-
-				a.report(pass, Diagnostic{
-					From:    group[i].Position,
-					Message: msg,
-				})
 				break
 			}
+		}
+		
+		if groupNeedsSorting {
+			elementType := getElementType(msg)
+			fix := a.generateFix(pass, group, elementType)
+			
+			a.report(pass, Diagnostic{
+				From:       group[unsortedIndex].Position,
+				Message:    msg,
+				Suggestion: fix,
+			})
 		}
 	}
 
@@ -441,4 +452,21 @@ func hasPrefix(name, prefix string) bool {
 	}
 
 	return strings.HasPrefix(name, prefix)
+}
+
+func getElementType(msg string) string {
+	switch msg {
+	case "variable/constant declarations are not sorted":
+		return "declarations"
+	case "struct fields are not sorted":
+		return "struct fields"
+	case "interface methods are not sorted":
+		return "interface methods"
+	case "variadic arguments are not sorted":
+		return "variadic arguments"
+	case "composite literal elements are not sorted":
+		return "map keys"
+	default:
+		return "elements"
+	}
 }

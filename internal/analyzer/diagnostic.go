@@ -38,7 +38,7 @@ func (d Diagnostic) AsGoAnalysisDiagnostic() analysis.Diagnostic {
 }
 
 func (d Diagnostic) HasFixSuggestion() bool {
-	return d.Suggestion != nil && d.Suggestion.Replacement != nil
+	return d.Suggestion != nil && len(d.Suggestion.Replacement) > 0
 }
 
 type FixSuggestion struct {
