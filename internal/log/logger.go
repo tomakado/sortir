@@ -6,24 +6,22 @@ import (
 )
 
 type Logger struct {
-	logger *slog.Logger
 	level  Level
+	logger *slog.Logger
 }
 
 func NewLogger(level Level) *Logger {
 	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level.toSlogLevel()})
 
 	return &Logger{
-		logger: slog.New(h),
-		level:  level,
+		level: level, logger: slog.New(h),
 	}
 }
 
 func (l *Logger) With(args ...any) *Logger {
 	newLogger := l.logger.With(args...)
 	return &Logger{
-		logger: newLogger,
-		level:  l.level,
+		level: l.level, logger: newLogger,
 	}
 }
 

@@ -7,7 +7,7 @@ var (
 )
 
 type MyStruct struct {
-	Apple  int
+	Apple  int  // want "struct fields are not sorted"
 	Banana bool `json:"banana"`
 	Zebra  string
 }

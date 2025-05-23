@@ -1,0 +1,42 @@
+package composite_literals
+
+type Person struct {
+	Age     int
+	City    string
+	Country string
+	Name    string
+	Street  string
+}
+
+func main() {
+	// Multi-line struct literal with unsorted fields
+	p1 := &Person{
+		Age:     30,
+		City:    "New York",
+		Country: "USA",
+		Name:    "John",
+		Street:  "Main St", // want `composite literal elements are not sorted`
+	}
+
+	// Another multi-line struct literal
+	p2 := Person{
+		Age:     25,
+		City:    "Toronto",
+		Country: "Canada", // want `composite literal elements are not sorted`
+		Name:    "Jane",
+		Street:  "Queen St",
+	}
+
+	// Single-line struct literal (should remain single-line)
+	p3 := Person{Age: 35, City: "London", Country: "UK", Name: "Bob", Street: "Baker St"} // want `composite literal elements are not sorted`
+
+	// Map literal with multi-line format
+	m := map[string]int{
+		"apple": 2,
+		"banana": 4,
+		"mango": 3,
+		"zebra": 1, // want `composite literal elements are not sorted`
+	}
+
+	_, _, _, _ = p1, p2, p3, m
+}

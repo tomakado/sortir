@@ -1,31 +1,37 @@
-package empty_lines
+package ignore_groups
 
 const (
 	Group1A = 1 // want "variable/constant declarations are not sorted"
 	Group1B = 2
 	Group1Z = 3
-
-	Group2A = "a" // want "variable/constant declarations are not sorted"
+	Group2A = "a"
 	Group2B = "b"
 	Group2Z = "z"
 )
 
 var (
 	a1 = "a1" // want "variable/constant declarations are not sorted"
+	a2 = "a2"
 	b1 = "b1"
-	z1 = "z1"
-
-	a2 = "a2" // want "variable/constant declarations are not sorted"
 	b2 = "b2"
+	z1 = "z1"
 	z2 = "z2"
 )
 
 type MyStruct struct {
 	A1 int // want "struct fields are not sorted"
+	A2 string
 	B1 int
-	Z1 int
-
-	A2 string // want "struct fields are not sorted"
 	B2 string
+	Z1 int
 	Z2 string
+}
+
+type MyInterface interface {
+	AMethod() // want "interface methods are not sorted"
+	AMethod2()
+	BMethod()
+	BMethod2()
+	ZMethod()
+	ZMethod2()
 }

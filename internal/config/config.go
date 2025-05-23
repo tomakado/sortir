@@ -8,25 +8,22 @@ type CheckConfig struct {
 }
 
 type SortConfig struct {
+	FixModeEnabled bool   `yaml:"fix"`
 	GlobalPrefix   string `yaml:"prefix"`
 	IgnoreGroups   bool   `yaml:"ignoreGroups"`
-	FixModeEnabled bool   `yaml:"fix"`
 	Verbose        bool   `yaml:"verbose"`
 
 	Constants        *CheckConfig `yaml:"constants"`
-	Variables        *CheckConfig `yaml:"variables"`
-	StructFields     *CheckConfig `yaml:"structFields"`
 	InterfaceMethods *CheckConfig `yaml:"interfaceMethods"`
-	VariadicArgs     *CheckConfig `yaml:"variadicArgs"`
 	MapKeys          *CheckConfig `yaml:"mapKeys"`
+	StructFields     *CheckConfig `yaml:"structFields"`
+	Variables        *CheckConfig `yaml:"variables"`
+	VariadicArgs     *CheckConfig `yaml:"variadicArgs"`
 }
 
 func New() *SortConfig {
 	return &SortConfig{
-		GlobalPrefix:   Default[string](FlagFilterPrefix),
-		IgnoreGroups:   Default[bool](FlagIgnoreGroups),
-		FixModeEnabled: Default[bool](FlagFix),
-		Verbose:        Default[bool](FlagVerbose),
+		FixModeEnabled: Default[bool](FlagFix), GlobalPrefix: Default[string](FlagFilterPrefix), IgnoreGroups: Default[bool](FlagIgnoreGroups), Verbose: Default[bool](FlagVerbose),
 
 		Constants: &CheckConfig{
 			Enabled: Default[bool](FlagConstants),

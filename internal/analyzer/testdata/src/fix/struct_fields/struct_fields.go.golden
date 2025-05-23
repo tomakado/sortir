@@ -1,13 +1,13 @@
 package struct_fields
 
 type UnsortedStruct struct {
-	Apple int
+	Apple  int  // want "struct fields are not sorted"
 	Banana bool `json:"banana"`
-	Zebra string
+	Zebra  string
 }
 
 type AnotherStruct struct {
-	A int
+	A int // want "struct fields are not sorted"
 	B int
 	Z int
 }

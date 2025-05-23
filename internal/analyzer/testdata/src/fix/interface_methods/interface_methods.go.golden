@@ -1,13 +1,13 @@
 package interface_methods
 
 type UnsortedInterface interface {
-	AMethod()
+	AMethod() // want "interface methods are not sorted"
 	BMethod()
 	ZMethod()
 }
 
 type AnotherInterface interface {
-	Close() error
+	Close() error // want "interface methods are not sorted"
 	Read([]byte) (int, error)
 	Write([]byte) (int, error)
 }

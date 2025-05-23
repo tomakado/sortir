@@ -1,9 +1,9 @@
 package config
 
 const (
-	FlagIgnoreGroups = "ignore-groups"
 	FlagFilterPrefix = "filter-prefix"
 	FlagFix          = "fix"
+	FlagIgnoreGroups = "ignore-groups"
 	FlagVerbose      = "verbose"
 
 	FlagConstants       = "constants"

@@ -22,9 +22,9 @@ type Logger interface {
 }
 
 type Analyzer struct {
-	cfg *config.SortConfig
+	analyzer *analysis.Analyzer
 
-	analyzer    *analysis.Analyzer
+	cfg         *config.SortConfig
 	diagnostics []Diagnostic
 	logger      Logger
 }

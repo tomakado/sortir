@@ -517,6 +517,57 @@ const (
 `
 		testGenDeclSorting(t, cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
 	})
+
+	t.Run("respect groups", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			Constants: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: false,
+		}
+
+		src := `
+package test
+
+const (
+	A = 1
+	B = 2
+
+	Y = 3
+	X = 4
+)
+`
+		testGenDeclSorting(t, cfg, src, token.CONST, false, "variable/constant declarations are not sorted")
+	})
+
+	t.Run("ignore groups variables", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &config.SortConfig{
+			Variables: &config.CheckConfig{
+				Enabled: true,
+				Prefix:  "",
+			},
+			GlobalPrefix: "",
+			IgnoreGroups: true,
+		}
+
+		src := `
+package test
+
+var (
+	a = 1
+
+	c = 3
+	b = 2
+)
+`
+		testGenDeclSorting(t, cfg, src, token.VAR, false, "variable/constant declarations are not sorted")
+	})
 }
 
 func TestCheckStructType(t *testing.T) {
@@ -652,6 +703,59 @@ type MyStruct struct {
 		require.True(t, result)
 		require.Empty(t, getDiagnostics(pass))
 	})
+
+	t.Run("ignore groups", func(t *testing.T) {
+		t.Parallel()
+
+		testStructTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				StructFields: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: true,
+			},
+			src: `
+package test
+
+type MyStruct struct {
+	A string
+
+	C int
+	B bool
+}
+`,
+			errorMessage: "struct fields are not sorted",
+		}, false)
+	})
+
+	t.Run("respect groups", func(t *testing.T) {
+		t.Parallel()
+
+		testStructTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				StructFields: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: false,
+			},
+			src: `
+package test
+
+type MyStruct struct {
+	A string
+	B bool
+
+	Y int
+	X string
+}
+`,
+			errorMessage: "struct fields are not sorted",
+		}, false)
+	})
 }
 
 func TestCheckInterfaceType(t *testing.T) {
@@ -749,6 +853,59 @@ type MyInterface interface {
 		result := a.CheckInterfaceType(pass, interfaceType)
 		require.True(t, result)
 		require.Empty(t, getDiagnostics(pass))
+	})
+
+	t.Run("ignore groups", func(t *testing.T) {
+		t.Parallel()
+
+		testInterfaceTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				InterfaceMethods: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: true,
+			},
+			src: `
+package test
+
+type MyInterface interface {
+	A() string
+
+	C() int
+	B() bool
+}
+`,
+			errorMessage: "interface methods are not sorted",
+		}, false)
+	})
+
+	t.Run("respect groups", func(t *testing.T) {
+		t.Parallel()
+
+		testInterfaceTypeSorting(t, testParams{
+			cfg: &config.SortConfig{
+				InterfaceMethods: &config.CheckConfig{
+					Enabled: true,
+					Prefix:  "",
+				},
+				GlobalPrefix: "",
+				IgnoreGroups: false,
+			},
+			src: `
+package test
+
+type MyInterface interface {
+	A() string
+	B() bool
+
+	Y() int
+	X() string
+}
+`,
+			errorMessage: "interface methods are not sorted",
+		}, false)
 	})
 }
 

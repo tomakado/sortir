@@ -134,6 +134,34 @@ func (a *Analyzer) extractFullLine(file *token.File, content []byte, lineNum int
 	return ""
 }
 
+func (a *Analyzer) extractFieldLines(original []Metadata, file *token.File, content []byte) map[ast.Node]string {
+	fieldLines := make(map[ast.Node]string)
+
+	for _, meta := range original {
+		fullLine := a.extractFullLine(file, content, meta.Line)
+		if fullLine != "" {
+			fieldLines[meta.Node] = fullLine
+		}
+	}
+
+	return fieldLines
+}
+
+func (a *Analyzer) buildSortedFieldResult(original, sorted []Metadata, fieldLines map[ast.Node]string) []string {
+	var result []string
+
+	for i, meta := range sorted {
+		if line, ok := fieldLines[meta.Node]; ok {
+			if i > 0 && !a.cfg.IgnoreGroups && a.shouldAddEmptyLine(original, sorted, i) {
+				result = append(result, "")
+			}
+			result = append(result, line)
+		}
+	}
+
+	return result
+}
+
 func (a *Analyzer) findLineEnd(file *token.File, content []byte, lineStart token.Pos) token.Pos {
 	offset := file.Offset(lineStart)
 	lineEnd := lineStart
@@ -152,7 +180,7 @@ func (a *Analyzer) buildSortedResult(original, sorted []Metadata, declLines map[
 	for i, meta := range sorted {
 		spec := meta.Node.(*ast.ValueSpec)
 		if info, ok := declLines[spec]; ok {
-			if i > 0 && a.shouldAddEmptyLine(original, sorted, i) {
+			if i > 0 && !a.cfg.IgnoreGroups && a.shouldAddEmptyLine(original, sorted, i) {
 				result = append(result, "")
 			}
 			result = append(result, info.fullLine)
@@ -194,7 +222,7 @@ func (a *Analyzer) generateGenDeclFixNodeByNode(pass *analysis.Pass, original, s
 
 		if i > 0 {
 			buf.WriteByte('\n')
-			if original[i].Line-original[i-1].Line > 1 {
+			if !a.cfg.IgnoreGroups && original[i].Line-original[i-1].Line > 1 {
 				buf.WriteByte('\n')
 			}
 		}
@@ -212,7 +240,35 @@ func (a *Analyzer) generateGenDeclFixNodeByNode(pass *analysis.Pass, original, s
 }
 
 func (a *Analyzer) generateFieldFix(pass *analysis.Pass, original, sorted []Metadata) ([]byte, token.Pos, token.Pos) {
+	if len(original) == 0 {
+		return nil, 0, 0
+	}
+
+	// Try to preserve original formatting by extracting with line context
+	if pass.ReadFile != nil {
+		if result := a.generateFieldFixPreserveFormat(pass, original, sorted); result != nil {
+			return result, original[0].Node.Pos(), original[len(original)-1].Node.End()
+		}
+	}
+
+	// Fallback to node-by-node extraction
 	return a.generateIndentedFix(pass, original, sorted, "", "\n")
+}
+
+func (a *Analyzer) generateFieldFixPreserveFormat(pass *analysis.Pass, original, sorted []Metadata) []byte {
+	if len(original) == 0 {
+		return nil
+	}
+
+	content, file := a.getFileContent(pass, original[0].Node.Pos())
+	if content == nil || file == nil {
+		return nil
+	}
+
+	fieldLines := a.extractFieldLines(original, file, content)
+	result := a.buildSortedFieldResult(original, sorted, fieldLines)
+
+	return []byte(strings.Join(result, "\n"))
 }
 
 func (a *Analyzer) generateExprFix(pass *analysis.Pass, original, sorted []Metadata) ([]byte, token.Pos, token.Pos) {
@@ -244,6 +300,14 @@ func (a *Analyzer) generateKeyValueFix(pass *analysis.Pass, original, sorted []M
 		return nil, 0, 0
 	}
 
+	// Try to preserve original formatting by extracting with line context
+	if pass.ReadFile != nil {
+		if result := a.generateKeyValueFixPreserveFormat(pass, original, sorted); result != nil {
+			return result, original[0].Node.Pos(), original[len(original)-1].Node.End()
+		}
+	}
+
+	// Fallback to simple comma-separated list
 	sourceMap := a.buildSourceMap(pass, original)
 
 	var buf bytes.Buffer
@@ -263,6 +327,51 @@ func (a *Analyzer) generateKeyValueFix(pass *analysis.Pass, original, sorted []M
 	return buf.Bytes(), from, to
 }
 
+func (a *Analyzer) generateKeyValueFixPreserveFormat(pass *analysis.Pass, original, sorted []Metadata) []byte {
+	if len(original) == 0 {
+		return nil
+	}
+
+	// Check if elements are on different lines
+	multiLine := false
+	if len(original) > 1 {
+		for i := 1; i < len(original); i++ {
+			if original[i].Line > original[i-1].Line {
+				multiLine = true
+				break
+			}
+		}
+	}
+
+	// If not multi-line, use simple comma-separated format
+	if !multiLine {
+		return nil
+	}
+
+	// Build multi-line format preserving indentation
+	sourceMap := a.buildSourceMap(pass, original)
+	var buf bytes.Buffer
+	
+	// Detect common indentation
+	indentLevel := a.detectKeyValueIndent(pass, original)
+	
+	for i, meta := range sorted {
+		kv := meta.Node.(*ast.KeyValueExpr)
+		
+		if i > 0 {
+			buf.WriteString(",\n")
+			if !a.cfg.IgnoreGroups && a.shouldAddEmptyLine(original, sorted, i) {
+				buf.WriteByte('\n')
+			}
+		}
+		
+		buf.WriteString(indentLevel)
+		buf.WriteString(sourceMap[kv])
+	}
+
+	return buf.Bytes()
+}
+
 func (a *Analyzer) generateIndentedFix(pass *analysis.Pass, original, sorted []Metadata, prefix, separator string) ([]byte, token.Pos, token.Pos) {
 	if len(original) == 0 {
 		return nil, 0, 0
@@ -279,7 +388,7 @@ func (a *Analyzer) generateIndentedFix(pass *analysis.Pass, original, sorted []M
 	for i, meta := range sorted {
 		if i > 0 {
 			buf.WriteString(prefix + separator)
-			if original[i].Line-original[i-1].Line > 1 {
+			if !a.cfg.IgnoreGroups && original[i].Line-original[i-1].Line > 1 {
 				buf.WriteByte('\n')
 			}
 		}
@@ -310,7 +419,7 @@ func (a *Analyzer) extractNodeSource(pass *analysis.Pass, node ast.Node) string 
 	if src := a.extractFromFile(pass, node); src != "" {
 		return src
 	}
-	
+
 	// Fallback to formatting the node
 	return a.formatNode(pass, node)
 }
@@ -319,25 +428,25 @@ func (a *Analyzer) extractFromFile(pass *analysis.Pass, node ast.Node) string {
 	if pass.ReadFile == nil {
 		return ""
 	}
-	
+
 	startPos := pass.Fset.Position(node.Pos())
 	content, err := pass.ReadFile(startPos.Filename)
 	if err != nil {
 		return ""
 	}
-	
+
 	file := pass.Fset.File(node.Pos())
 	if file == nil {
 		return ""
 	}
-	
+
 	start := file.Offset(node.Pos())
 	end := file.Offset(node.End())
-	
+
 	if start >= 0 && end <= len(content) && start < end {
 		return string(content[start:end])
 	}
-	
+
 	return ""
 }
 
@@ -381,6 +490,42 @@ func (a *Analyzer) sortNamesInFullLine(line string, spec *ast.ValueSpec) string 
 	sortedNames := strings.Join(names, ", ")
 
 	return strings.Replace(line, originalNames, sortedNames, 1)
+}
+
+func (a *Analyzer) detectKeyValueIndent(pass *analysis.Pass, original []Metadata) string {
+	if len(original) == 0 {
+		return ""
+	}
+	
+	// Try to detect indentation from file content
+	if pass.ReadFile != nil {
+		content, file := a.getFileContent(pass, original[0].Node.Pos())
+		if content != nil && file != nil {
+			// Get the line of the first element
+			lineStart := file.LineStart(original[0].Line)
+			lineEnd := a.findLineEnd(file, content, lineStart)
+			
+			startOffset := file.Offset(lineStart)
+			endOffset := file.Offset(lineEnd)
+			
+			if startOffset >= 0 && endOffset <= len(content) {
+				line := string(content[startOffset:endOffset])
+				// Extract leading whitespace
+				indent := ""
+				for _, ch := range line {
+					if ch == ' ' || ch == '\t' {
+						indent += string(ch)
+					} else {
+						break
+					}
+				}
+				return indent
+			}
+		}
+	}
+	
+	// Fallback: use tab
+	return "\t"
 }
 
 func (a *Analyzer) getCommonIndent(sourceMap map[ast.Node]string) string {

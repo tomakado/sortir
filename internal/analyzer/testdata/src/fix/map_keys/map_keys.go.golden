@@ -1,12 +1,16 @@
 package map_keys
 
 var m1 = map[string]int{
-	"apple": 1, "banana": 2, "zebra": 3,
+	"apple": 1,
+	"banana": 2,
+	"zebra": 3,
 }
 
 func foo() {
 	m2 := map[string]string{
-		"a": "A", "b": "B", "z": "Z",
+		"a": "A",
+		"b": "B",
+		"z": "Z",
 	}
 	_ = m2
 }

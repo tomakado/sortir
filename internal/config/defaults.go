@@ -1,11 +1,7 @@
 package config
 
 var defaults = map[string]any{
-	FlagConstants:        true,
-	FlagVariables:        true,
-	FlagStructFields:     true,
-	FlagInterfaceMethods: true,
-	FlagMapKeys:          true,
+	FlagConstants: true, FlagInterfaceMethods: true, FlagMapKeys: true, FlagStructFields: true, FlagVariables: true,
 }
 
 func Default[T any](param string) T {

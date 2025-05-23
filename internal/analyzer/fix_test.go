@@ -86,6 +86,15 @@ func TestAnalyzerFixes(t *testing.T) {
 			dir:  "fix/edge_cases",
 			name: "edge_cases",
 		},
+		{
+			analyzer: func() *Analyzer {
+				a := New()
+				a.cfg.IgnoreGroups = true
+				return a
+			},
+			dir:  "fix/ignore_groups",
+			name: "ignore_groups",
+		},
 	}
 
 	for _, test := range tests {
